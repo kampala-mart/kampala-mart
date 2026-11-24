@@ -1,26 +1,13 @@
-# Kampala Mart - Render deploy
+# Kampala Mart - Render + Postgres (CLEAN v3)
 
-Your design is unchanged (desktop + phone in one file). Data now lives on Render at /api/shop, so every buyer/seller sees the same shop.
+## Upload - do this EXACTLY once
+1. On GitHub, delete ALL files in the repo (so no _1 / duplicate files remain).
+2. Extract this zip ONCE into an EMPTY folder. Do NOT extract it twice into the same folder - that creates _1 duplicates.
+3. Upload ALL files from that empty folder to GitHub. You must see exactly these 8 files, no _1 files:
+   index.html, public/index.html, server.py, requirements.txt, render.yaml, sw.js, manifest.json, README.md
+4. Render > kampala-mart > Manual Deploy > Deploy latest commit > wait for Live.
+5. HARD REFRESH your site: Ctrl+Shift+R (or on phone: clear site data). Old service worker cached the blank page - a normal reload will keep showing blank!
+6. Check https://<your-app>.onrender.com/api/health -> must say storage postgres after DATABASE_URL is set.
 
-## Deploy (5 min)
-1. Create a free GitHub repo, upload ALL files in this folder (keep structure: server.py at root, index in public/).
-2. Render.com > New + > Web Service > connect that repo.
-3. Environment: Python. Build Command: leave empty. Start Command: `python server.py`
-4. Deploy. Open your `https://<your-app>.onrender.com` - test: add product on phone, reload on desktop, it must appear.
-5. Owner: open Owner Panel > Save to Cloud / Save This Shop once to push your current shop to Render.
-
-## IMPORTANT - free Render disk wipes on redeploy
-Free Render disk is ephemeral. Do ONE of these so products never wipe:
-- Option A (easiest, recommended): Render dashboard > your service > Disks > Add Disk, Name: data, Mount Path: /opt/render/project/src, Size: 1 GB, then redeploy. data.json then survives restarts.
-- Option B: use Render Postgres (free) and later point /api/shop at it - ask me and I will convert server.py.
-
-## How sync works
-- Seller upload / owner change -> app auto-saves (debounced) PUT /api/shop -> server writes data.json
-- Every visitor loads GET /api/shop on open, so they see the latest shop.
-- Empty saves are rejected (409) so a blank load can never wipe a live shop.
-
-## Files
-- public/index.html - your site, cleaned (no PythonAnywhere/Cloudflare/Google Sheets, no hardcoded keys)
-- server.py - stdlib only, no pip installs needed, serves site + API
-- render.yaml - Render service definition
-- sw.js / manifest.json - phone install (PWA)
+## Why v3 was blank before
+v2 had a broken line `[STRIPPED]` in the save function - invalid JS, whole app failed to load -> blank page. v3 fixes it. Verified: main app script passes node --check.

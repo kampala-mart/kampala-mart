@@ -3,13 +3,42 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
 BASE=os.path.dirname(os.path.abspath(__file__))
 PUBLIC=os.path.join(BASE,"public")
-DATA_FILE=os.environ.get("KM_DATA_FILE", os.path.join(BASE,"data.json"))
+DATA_FILE=os.path.join(BASE,"data.json")
 LOCK=threading.Lock()
+DB_URL=os.environ.get("DATABASE_URL","")
+_pg=None
+def pg_conn():
+    global _pg
+    if _pg is None:
+        import psycopg2
+        url=DB_URL.replace("postgres://","postgresql://",1)
+        _pg=psycopg2.connect(url, sslmode="require", connect_timeout=10)
+        _pg.autocommit=True
+        with _pg.cursor() as c:
+            c.execute("CREATE TABLE IF NOT EXISTS shop (id INT PRIMARY KEY, data JSONB NOT NULL)")
+            c.execute("INSERT INTO shop (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING")
+    return _pg
 def load():
+    if DB_URL:
+        try:
+            with pg_conn().cursor() as c:
+                c.execute("SELECT data FROM shop WHERE id=1")
+                row=c.fetchone()
+                return row[0] if row and isinstance(row[0],dict) else {"products":[],"settings":{},"ads":{},"banners":[],"categories":[],"locations":[],"updatedAt":None}
+        except Exception:
+            global _pg; _pg=None
+            with pg_conn().cursor() as c:
+                c.execute("SELECT data FROM shop WHERE id=1")
+                row=c.fetchone()
+                return row[0] if row and isinstance(row[0],dict) else {"products":[],"settings":{},"ads":{},"banners":[],"categories":[],"locations":[],"updatedAt":None}
     try:
         with open(DATA_FILE) as f: return json.load(f)
     except Exception: return {"products":[],"settings":{},"ads":{},"banners":[],"categories":[],"locations":[],"updatedAt":None}
 def save(data):
+    if DB_URL:
+        with pg_conn().cursor() as c:
+            c.execute("INSERT INTO shop (id, data) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data", [json.dumps(data)])
+        return
     tmp=DATA_FILE+".tmp"
     with open(tmp,"w") as f: json.dump(data,f)
     os.replace(tmp,DATA_FILE)
@@ -19,8 +48,12 @@ class H(SimpleHTTPRequestHandler):
         b=json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(b))); self.send_header("Cache-Control","no-store"); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
         u=urlparse(self.path).path
-        if u in ("/api/shop","/api/shop/"): return self._send(200, load())
-        if u in ("/api/health","/health"): return self._send(200, {"ok":True})
+        if u in ("/api/shop","/api/shop/"):
+            try: return self._send(200, load())
+            except Exception as e: return self._send(500, {"error": str(e)[:200]})
+        if u in ("/api/health","/health"):
+            try: d=load(); return self._send(200, {"ok":True,"storage":"postgres" if DB_URL else "local-file","products":len(d.get("products") or [])})
+            except Exception as e: return self._send(500, {"ok":False,"error":str(e)[:200]})
         if u=="/": u="/index.html"
         candidates=[]
         for root in (PUBLIC, BASE):
@@ -31,17 +64,15 @@ class H(SimpleHTTPRequestHandler):
         for c in candidates:
             if os.path.isfile(c): fp=c; break
         if fp is None:
-            return self._send(404, {"error":"index.html not found - public/index.html was not uploaded to GitHub. Re-upload the public/ folder."})
+            return self._send(404, {"error":"index.html not found - public/index.html was not uploaded to GitHub."})
         mt,_=mimetypes.guess_type(fp); mt=mt or "application/octet-stream"
         try:
             with open(fp,"rb") as f: data=f.read()
         except Exception as e:
             return self._send(500, {"error":str(e)[:200]})
         self.send_response(200); self.send_header("Content-Type",mt); self.send_header("Cache-Control","no-store" if fp.endswith(".html") else "public, max-age=3600"); self.send_header("Content-Length",str(len(data))); self.end_headers(); self.wfile.write(data)
-    def do_PUT(self):
-        self._write_shop()
-    def do_POST(self):
-        self._write_shop()
+    def do_PUT(self): self._write_shop()
+    def do_POST(self): self._write_shop()
     def _write_shop(self):
         u=urlparse(self.path).path
         if u not in ("/api/shop","/api/shop/"): return self._send(404,{"error":"not found"})
@@ -51,12 +82,14 @@ class H(SimpleHTTPRequestHandler):
         except Exception: return self._send(400,{"error":"invalid json"})
         if not isinstance(data,dict): return self._send(400,{"error":"shop must be an object"})
         with LOCK:
-            cur=load()
-            # Never let an empty accidental save wipe a live shop with products
+            try: cur=load()
+            except Exception as e: return self._send(500,{"error":str(e)[:200]})
             if isinstance(data.get("products"),list) and len(data["products"])==0 and isinstance(cur.get("products"),list) and len(cur["products"])>0 and not data.get("allowEmpty"):
                 return self._send(409,{"error":"refusing to overwrite live shop with empty products","products":len(cur["products"])})
-            save(data)
+            try: save(data)
+            except Exception as e: return self._send(500,{"error":str(e)[:200]})
         return self._send(200,{"ok":True,"products":len(data.get("products") or [])})
 if __name__=="__main__":
     port=int(os.environ.get("PORT","10000"))
+    print("Storage:", "Postgres" if DB_URL else "local data.json (set DATABASE_URL on Render)", flush=True)
     ThreadingHTTPServer(("0.0.0.0",port),H).serve_forever()

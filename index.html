@@ -1,11 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>
-/* Render bootstrap: site now uses same-origin /api/shop on Render. Clears old Render/Google/Render cloud settings. */
-(function(){ try{ localStorage.removeItem('km_cloud_settings'); localStorage.removeItem('km_google_url'); }catch(e){}
-try{ if('caches' in window){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); } }catch(e){} })();
-</script>
+<script>(function(){ try{ localStorage.removeItem('km_cloud_settings'); localStorage.removeItem('km_google_url'); }catch(e){} try{ if('caches' in window){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); } }catch(e){} })();</script>
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -5792,7 +5788,7 @@ y.useEffect(()=>{if(!kmAds.adsEnabled||!kmAds.adsenseId)return;try{if(document.q
 
 var kmCloudSql="Render uses /api/shop - no SQL setup needed.";
 var kmCloudHeaders=()=>({apikey:kmCloud.key,Authorization:"Bearer "+kmCloud.key,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=representation"});
-var kmCloudSaveNow=()=>{ var payload={id:1,data:{products:k,[STRIPPED] kmCats!=="undefined"?kmCats.list:[]),locations:(typeof kmLocs!=="undefined"?kmLocs.list:[]),updatedAt:new Date().toISOString()}}; return fetch("/api/shop",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload.data)}).then((r)=>{ if(!r.ok) throw new Error("Render save "+r.status); kmSetCloud((d)=>({...d,status:"Saved to Render - "+(payload.data.products||[]).length+" products saved. Everyone sees this shop now."})); G("Saved - everyone sees this shop now."); }).catch((e)=>{ var mm="Render save failed: "+e.message; kmSetCloud((d)=>({...d,status:mm})); G(mm); }); };
+var kmCloudSaveNow=()=>{ var payloadData={products:k,settings:n,ads:kmAds,banners:(window.__kmBannerList||[]),categories:(typeof kmCats!=="undefined"?kmCats.list:[]),locations:(typeof kmLocs!=="undefined"?kmLocs.list:[]),updatedAt:new Date().toISOString()}; return fetch("/api/shop",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payloadData)}).then((r)=>{ if(!r.ok) throw new Error("Render save "+r.status); kmSetCloud((d)=>({...d,status:"Saved to Render - "+(payloadData.products||[]).length+" products saved. Everyone sees this shop now."})); G("Saved - everyone sees this shop now."); }).catch((e)=>{ var mm="Render save failed: "+e.message; kmSetCloud((d)=>({...d,status:mm})); G(mm); }); };
   // --- V72 RETRY QUEUE: if save fails (Render cloud paused), keep retrying every 10s until it works ---
   y.useEffect(()=>{ var iv=setInterval(()=>{ try{ var st=(kmCloud.status||""); if(st.indexOf("Failed to fetch")!==-1 || st.indexOf("could not reach")!==-1 || st.indexOf("PAUSED")!==-1){ try{ /* V86: auto-save disabled - only save on upload/approve/owner-change, never auto-save empty */ }catch(e){} } }catch(e){} }, 10000); return ()=>clearInterval(iv); }, [kmCloud.status]);
   var kmApproveAll=()=>{ try{ var pend=(k||[]).filter((p)=>p.status==="pending_verification"||p.status==="draft"||p.status==="pending"); if(!pend.length){ G("No pending products — all are already live."); return; } W((d)=>d.map((p)=>(p.status==="pending_verification"||p.status==="draft"||p.status==="pending")?{...p,status:"live",feePaid:p.feePaid||0,sellerNotice:"Approved — your product is now live!"}:p)); G(pend.length+" products approved — now live for everyone. Wait 5s, then check other browser."); setTimeout(()=>{ try{ /* V86: auto-save disabled - only save on upload/approve/owner-change, never auto-save empty */ }catch(e){} }, 800); }catch(e){ G("Approve failed: "+e.message); } };
@@ -5811,7 +5807,6 @@ var kmCloudSaveNow=()=>{ var payload={id:1,data:{products:k,[STRIPPED] kmCats!==
   var kmOrigSave=kmCloudSaveNow;
   var kmSaveTolerant=()=>{ try{ var payloadData={products:k,settings:n,ads:kmAds}; var gu=kmGoogleUrl(); if(gu){ kmGoogleSave({data:payloadData}).then(()=>{ try{kmSetCloud((d)=>({...d,status:"Saved to Render cloud — everyone sees this shop now."}));}catch(e){} G("Saved — everyone sees this shop now."); }).catch(()=>{ try{kmOrigSave();}catch(e){} }); return; } try{kmOrigSave();}catch(e){} }catch(e){ G("Saved on this phone — will sync when cloud allows."); } };
 
-/* RENDER AUTO-SAVE: after first cloud load, PUT whole shop to /api/shop on any change so every buyer/seller sees it. Never overwrites cloud with empty shop. */
 var kmRenderAutoSave={loaded:false, timer:null};
 y.useEffect(()=>{ if(!kmRenderAutoSave.loaded) return; if(kmRenderAutoSave.timer) clearTimeout(kmRenderAutoSave.timer); kmRenderAutoSave.timer=setTimeout(()=>{ try{ var payloadData={products:k,settings:n,ads:kmAds,banners:(window.__kmBannerList||[]),categories:(typeof kmCats!=="undefined"?kmCats.list:[]),locations:(typeof kmLocs!=="undefined"?kmLocs.list:[]),updatedAt:new Date().toISOString()}; if(!Array.isArray(payloadData.products)) return; fetch("/api/shop",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payloadData)}).catch(()=>{}); }catch(e){} }, 1200); }, [k, n, kmAds]);
 setTimeout(function(){ kmRenderAutoSave.loaded=true; }, 6000);
