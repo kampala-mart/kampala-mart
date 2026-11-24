@@ -1,17 +1,15 @@
-# Kampala Mart - v4 FIX: Approve now saves to Postgres + all browsers can load flat format
+# Kampala Mart - v5 FIX: no more silent save failures
 
-## What v4 fixes (v3 bug)
-- v3: second browser could NOT read cloud (expected old rows[0].data format, server sends flat {products}).
-- v3: Google-first load returned early because Google URL is empty.
-- v3: Approve button never PUT to cloud (empty setTimeout).
-- v4: Approve now PUTs the live list to /api/shop. Load handles both flat and old formats.
+## What v5 fixes (v4 bug)
+- v4: products lived ONLY in the tab's memory. No localStorage backup. Every save swallowed errors with .catch(()=>{}), so a failed PUT looked like success.
+- v5: every change updates window.__kmLatestShop + localStorage backup km_products_backup. Autosave + Approve + Save button all use the LIVE copy, not a stale closure.
+- v5: autosave failures now SHOW in Owner Panel Cloud status ("CLOUD SAVE FAILED: ...") instead of silently vanishing.
+- v5: if cloud is empty, the browser restores its own backup so refresh never wipes. Cloud still wins when it has products.
+- v5 server: /api/shop always returns {products: [...], ...}, never bare {}.
 
 ## Upload (same as before, ONCE)
 1. GitHub: delete ALL files, extract this zip ONCE into an EMPTY folder, upload all files. No _1 files.
 2. Render > kampala-mart > Manual Deploy > Deploy latest commit > wait Live.
 3. HARD REFRESH: Ctrl+Shift+R (phone: clear site data).
-4. Test: phone add product > computer Approve > other browser reload must show it.
-5. Check https://<app>.onrender.com/api/health -> storage postgres.
-
-## Note
-Script km-v42-push-js has a pre-existing syntax error in the ORIGINAL file too (fails node --check in original as well). It is an isolated script tag and does not block the main app. Left untouched to avoid changing behaviour.
+4. Test: phone add > computer Approve > check Cloud status in Owner Panel (must say Saved to cloud) > other browser /api/shop must show the product > other browser site must show it.
+5. DO NOT touch Environment Variables - DATABASE_URL stays as is.

@@ -18,23 +18,28 @@ def pg_conn():
             c.execute("CREATE TABLE IF NOT EXISTS shop (id INT PRIMARY KEY, data JSONB NOT NULL)")
             c.execute("INSERT INTO shop (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING")
     return _pg
+def _normalize(d):
+    if not isinstance(d,dict): d={}
+    d.setdefault("products",[]); d.setdefault("settings",{}); d.setdefault("ads",{}); d.setdefault("banners",[]); d.setdefault("categories",[]); d.setdefault("locations",[])
+    return d
 def load():
     if DB_URL:
         try:
             with pg_conn().cursor() as c:
                 c.execute("SELECT data FROM shop WHERE id=1")
                 row=c.fetchone()
-                return row[0] if row and isinstance(row[0],dict) else {"products":[],"settings":{},"ads":{},"banners":[],"categories":[],"locations":[],"updatedAt":None}
+                return _normalize(row[0] if row else {})
         except Exception:
             global _pg; _pg=None
             with pg_conn().cursor() as c:
                 c.execute("SELECT data FROM shop WHERE id=1")
                 row=c.fetchone()
-                return row[0] if row and isinstance(row[0],dict) else {"products":[],"settings":{},"ads":{},"banners":[],"categories":[],"locations":[],"updatedAt":None}
+                return _normalize(row[0] if row else {})
     try:
-        with open(DATA_FILE) as f: return json.load(f)
-    except Exception: return {"products":[],"settings":{},"ads":{},"banners":[],"categories":[],"locations":[],"updatedAt":None}
+        with open(DATA_FILE) as f: return _normalize(json.load(f))
+    except Exception: return _normalize({})
 def save(data):
+    data=_normalize(data)
     if DB_URL:
         with pg_conn().cursor() as c:
             c.execute("INSERT INTO shop (id, data) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data", [json.dumps(data)])
