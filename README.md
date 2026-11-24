@@ -1,13 +1,17 @@
-# Kampala Mart - Render + Postgres (CLEAN v3)
+# Kampala Mart - v4 FIX: Approve now saves to Postgres + all browsers can load flat format
 
-## Upload - do this EXACTLY once
-1. On GitHub, delete ALL files in the repo (so no _1 / duplicate files remain).
-2. Extract this zip ONCE into an EMPTY folder. Do NOT extract it twice into the same folder - that creates _1 duplicates.
-3. Upload ALL files from that empty folder to GitHub. You must see exactly these 8 files, no _1 files:
-   index.html, public/index.html, server.py, requirements.txt, render.yaml, sw.js, manifest.json, README.md
-4. Render > kampala-mart > Manual Deploy > Deploy latest commit > wait for Live.
-5. HARD REFRESH your site: Ctrl+Shift+R (or on phone: clear site data). Old service worker cached the blank page - a normal reload will keep showing blank!
-6. Check https://<your-app>.onrender.com/api/health -> must say storage postgres after DATABASE_URL is set.
+## What v4 fixes (v3 bug)
+- v3: second browser could NOT read cloud (expected old rows[0].data format, server sends flat {products}).
+- v3: Google-first load returned early because Google URL is empty.
+- v3: Approve button never PUT to cloud (empty setTimeout).
+- v4: Approve now PUTs the live list to /api/shop. Load handles both flat and old formats.
 
-## Why v3 was blank before
-v2 had a broken line `[STRIPPED]` in the save function - invalid JS, whole app failed to load -> blank page. v3 fixes it. Verified: main app script passes node --check.
+## Upload (same as before, ONCE)
+1. GitHub: delete ALL files, extract this zip ONCE into an EMPTY folder, upload all files. No _1 files.
+2. Render > kampala-mart > Manual Deploy > Deploy latest commit > wait Live.
+3. HARD REFRESH: Ctrl+Shift+R (phone: clear site data).
+4. Test: phone add product > computer Approve > other browser reload must show it.
+5. Check https://<app>.onrender.com/api/health -> storage postgres.
+
+## Note
+Script km-v42-push-js has a pre-existing syntax error in the ORIGINAL file too (fails node --check in original as well). It is an isolated script tag and does not block the main app. Left untouched to avoid changing behaviour.
