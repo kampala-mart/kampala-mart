@@ -1,37 +1,26 @@
-# Kampala Mart - Render + Postgres (does NOT wipe)
+# Kampala Mart - Render deploy
 
-Your design is unchanged (desktop + phone in one file). Data now lives in Render Postgres at /api/shop, so redeploys / restarts / free-plan sleeps CANNOT wipe products.
+Your design is unchanged (desktop + phone in one file). Data now lives on Render at /api/shop, so every buyer/seller sees the same shop.
 
-## Deploy (one Blueprint, creates web service + database together)
-1. Create a free GitHub repo, upload ALL files in this folder (keep structure: server.py + requirements.txt at root, site in public/).
-2. Render.com > New + > Blueprint > connect that repo > Apply. Render creates BOTH:
-   - Web Service `kampala-mart`
-   - Database `kampala-mart-db` (free Postgres)
-   Render auto-sets DATABASE_URL on the web service from the database. Do NOT paste it manually.
-3. Wait for deploy to go Live. Open your https://<your-app>.onrender.com
-4. Check: open https://<your-app>.onrender.com/api/health - it must say "storage":"postgres"
-5. Test: add a product on your phone > reload on desktop > it must appear.
-6. Owner Panel > Save to Cloud / Save This Shop once, to push your current shop into Postgres.
-7. Prove it does not wipe: Render > your service > Manual Deploy > Deploy latest commit, wait, reload site - products must still be there.
+## Deploy (5 min)
+1. Create a free GitHub repo, upload ALL files in this folder (keep structure: server.py at root, index in public/).
+2. Render.com > New + > Web Service > connect that repo.
+3. Environment: Python. Build Command: leave empty. Start Command: `python server.py`
+4. Deploy. Open your `https://<your-app>.onrender.com` - test: add product on phone, reload on desktop, it must appear.
+5. Owner: open Owner Panel > Save to Cloud / Save This Shop once to push your current shop to Render.
 
-## If you already deployed the old disk version
-Option A (cleanest): deploy this Blueprint as a NEW service + database, then in the OLD site Owner Panel save once, and in the NEW site load - or just re-add products.
-Option B: in your EXISTING service, add env var DATABASE_URL from an existing Render Postgres database, set Build Command to `pip install -r requirements.txt`, redeploy. The old data.json is ignored once DATABASE_URL is set.
+## IMPORTANT - free Render disk wipes on redeploy
+Free Render disk is ephemeral. Do ONE of these so products never wipe:
+- Option A (easiest, recommended): Render dashboard > your service > Disks > Add Disk, Name: data, Mount Path: /opt/render/project/src, Size: 1 GB, then redeploy. data.json then survives restarts.
+- Option B: use Render Postgres (free) and later point /api/shop at it - ask me and I will convert server.py.
 
-## How it works
-- Seller upload / owner change -> app auto-saves PUT /api/shop -> server upserts ONE row (id=1) in Postgres table `shop(data JSONB)`
-- Every visitor loads GET /api/shop -> same Postgres row -> everyone sees same shop
-- Empty saves rejected (409) so a blank load can never wipe a live shop
-- Table is auto-created on first start: CREATE TABLE IF NOT EXISTS shop (id INT PRIMARY KEY, data JSONB)
+## How sync works
+- Seller upload / owner change -> app auto-saves (debounced) PUT /api/shop -> server writes data.json
+- Every visitor loads GET /api/shop on open, so they see the latest shop.
+- Empty saves are rejected (409) so a blank load can never wipe a live shop.
 
 ## Files
 - public/index.html - your site, cleaned (no PythonAnywhere/Cloudflare/Google Sheets, no hardcoded keys)
-- server.py - serves site + /api/shop, Postgres-first
-- requirements.txt - psycopg2-binary
-- render.yaml - Blueprint: web service + free Postgres, DATABASE_URL wired automatically
+- server.py - stdlib only, no pip installs needed, serves site + API
+- render.yaml - Render service definition
 - sw.js / manifest.json - phone install (PWA)
-
-## Notes
-- Render free Postgres: free for 90 days, then it expires unless you upgrade / recreate it. If it ever expires, create a new free Postgres in Render, copy its Internal Database URL into the web service env var DATABASE_URL, redeploy. Your site code does not change.
-- Never put DATABASE_URL in GitHub / in the HTML. It lives only as a Render env var.
-- Local test without Postgres: `python server.py` falls back to local data.json (for testing only, not used on Render).
