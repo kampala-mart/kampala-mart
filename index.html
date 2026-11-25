@@ -1,7 +1,8 @@
-<!-- KAMPALA MART BUILD v9.0 -->
+<!-- KAMPALA MART BUILD v9.1 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>(function(){try{if(location.search.indexOf('fresh=1')>-1){var jobs=[];if('caches' in window){jobs.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}))}if('serviceWorker' in navigator){jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}))}Promise.all(jobs).then(function(){location.replace('/')}).catch(function(){location.replace('/')})}}catch(e){}})();</script>
 <script>(function(){ try{ localStorage.removeItem('km_cloud_settings'); localStorage.removeItem('km_google_url'); }catch(e){} try{ if('caches' in window){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); } }catch(e){} })();</script>
 
   <meta charset="UTF-8">
@@ -7039,7 +7040,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
   // Register service worker for installable PWA (phone = app, laptop = website)
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
-      try{ navigator.serviceWorker.register('/sw.js').catch(function(){}); }catch(e){}
+      try{ navigator.serviceWorker.register('/sw.js?v=91').catch(function(){}); }catch(e){}
     });
   }
   var deferredPrompt = null;
@@ -7393,7 +7394,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
 
 <script id="km-v9-boot">
 (function(){
-  window.__KM_BUILD='v9.0';
+  window.__KM_BUILD='v9.1';
   window.__kmErr='';
   window.__kmApi={state:'waiting'};
   window.addEventListener('error', function(e){ try{ if(!window.__kmErr) window.__kmErr=(e.message||'Script error')+' @ '+(e.filename||'').split('/').pop()+':'+(e.lineno||''); }catch(_){} }, true);
@@ -7420,7 +7421,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
     var apiLine = api.state==='answered' ? ('Server answered (status '+api.status+') but the shop did not draw. Screenshot this screen.') : api.state==='failed' ? ('Server did not answer: '+api.err) : 'Waiting for the server - it may still be waking up.';
     var d=document.createElement('div'); d.id='km-v9-diag';
     d.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;font-family:sans-serif;text-align:center';
-    d.innerHTML='<div style="font-size:22px;font-weight:800">Shop did not open</div><div style="color:#555;font-size:14px;max-width:340px;line-height:1.5">Build: <b>v9.0</b><br>Problem: <b id="km-v9-err"></b><br>Shop data: <b id="km-v9-api"></b></div><button id="km-v9-retry" style="background:#111;color:#fff;border:0;border-radius:12px;padding:14px 26px;font-weight:800;font-size:16px;cursor:pointer">Tap to retry</button><button id="km-v9-clear" style="background:#fff;color:#111;border:2px solid #111;border-radius:12px;padding:12px 22px;font-weight:800;font-size:15px;cursor:pointer">Clear saved app data &amp; retry</button><button id="km-v9-close" style="background:none;border:0;color:#888;font-size:14px;cursor:pointer;text-decoration:underline">Close this message</button><div style="color:#999;font-size:12px">If it keeps happening, screenshot this screen and send it.</div>';
+    d.innerHTML='<div style="font-size:22px;font-weight:800">Shop did not open</div><div style="color:#555;font-size:14px;max-width:340px;line-height:1.5">Build: <b>v9.1</b><br>Problem: <b id="km-v9-err"></b><br>Shop data: <b id="km-v9-api"></b></div><button id="km-v9-retry" style="background:#111;color:#fff;border:0;border-radius:12px;padding:14px 26px;font-weight:800;font-size:16px;cursor:pointer">Tap to retry</button><button id="km-v9-clear" style="background:#fff;color:#111;border:2px solid #111;border-radius:12px;padding:12px 22px;font-weight:800;font-size:15px;cursor:pointer">Clear saved app data &amp; retry</button><button id="km-v9-close" style="background:none;border:0;color:#888;font-size:14px;cursor:pointer;text-decoration:underline">Close this message</button><div style="color:#999;font-size:12px">If it keeps showing an old version, open the site address with ?fresh=1 at the end (example: kampalamart.com/?fresh=1). If it keeps happening, screenshot this screen and send it.</div>';
     document.body.appendChild(d);
     d.querySelector('#km-v9-err').textContent=window.__kmErr || 'No script error - the shop simply did not draw.';
     d.querySelector('#km-v9-api').textContent=apiLine;

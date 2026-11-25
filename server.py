@@ -55,7 +55,7 @@ class H(SimpleHTTPRequestHandler):
         if fp is None: fp=os.path.join(BASE,"index.html")
         mt,_=mimetypes.guess_type(fp); mt=mt or "application/octet-stream"
         with open(fp,"rb") as f: data=f.read()
-        self.send_response(200); self.send_header("Content-Type",mt); self.send_header("Cache-Control","no-store" if fp.endswith(".html") else "public, max-age=3600"); self.send_header("Content-Length",str(len(data))); self.end_headers(); self.wfile.write(data)
+        self.send_response(200); self.send_header("Content-Type",mt); self.send_header("Cache-Control","no-store" if fp.endswith((".html",".js",".json")) else "public, max-age=3600"); self.send_header("Content-Length",str(len(data))); self.end_headers(); self.wfile.write(data)
     def do_PUT(self): self._write()
     def do_POST(self): self._write()
     def _write(self):
