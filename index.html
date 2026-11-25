@@ -7288,6 +7288,18 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
     if((shop&&Array.isArray(shop.products)&&shop.products.length>0)||hasCards||coverChecks>10){ hideCover(); clearInterval(coverTimer); }
   }, 400);
   setTimeout(hideCover, 6000);
+  setTimeout(function(){
+    try{
+      if(cover && cover.style.display!=='none' && !document.getElementById('km-v8-retry-btn')){
+        var msg=document.createElement('div'); msg.style.cssText='color:#555;font-size:14px;max-width:280px;text-align:center;line-height:1.4';
+        msg.textContent='The shop is taking long to wake up. This happens on first open. Tap below to try again.';
+        var rb=document.createElement('button'); rb.id='km-v8-retry-btn'; rb.type='button';
+        rb.textContent='Tap to retry'; rb.style.cssText='margin-top:14px;background:#111;color:#fff;border:0;border-radius:12px;padding:14px 22px;font-weight:800;font-size:16px;cursor:pointer';
+        rb.onclick=function(){ location.reload(); };
+        cover.appendChild(msg); cover.appendChild(rb);
+      }
+    }catch(e){}
+  }, 8000);
   
   function injectOwnerTools(){
     try{
