@@ -1,5 +1,5 @@
-/* Kampala Mart SW v91 - NEVER blank: if network + cache both fail, serve a retry page */
-const SHELL='km-shell-v91';
+/* Kampala Mart SW v92 - NEVER blank: if network + cache both fail, serve a retry page */
+const SHELL='km-shell-v92';
 self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(SHELL).then(c=>c.addAll(['/','/index.html']).catch(function(){}))); });
 self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.map(k=>{ if(k!==SHELL) return caches.delete(k); }))).then(()=>self.clients.claim())); });
 function timeoutFetch(req, ms){ return new Promise(function(resolve, reject){ var done=false; var t=setTimeout(function(){ if(!done){ done=true; reject(new Error('timeout')); } }, ms); fetch(req).then(function(r){ if(!done){ done=true; clearTimeout(t); resolve(r); } }).catch(function(err){ if(!done){ done=true; clearTimeout(t); reject(err); } }); }); }
