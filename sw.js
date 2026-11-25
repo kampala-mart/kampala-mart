@@ -1,6 +1,0 @@
-/* Kampala Mart SW v87 - keeps a saved copy of the page so the installed app never opens blank while Render wakes up */
-const SHELL='km-shell-v87';
-self.addEventListener('install',e=>{ self.skipWaiting(); e.waitUntil(caches.open(SHELL).then(c=>c.addAll(['/','/index.html']).catch(function(){}))); });
-self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.map(k=>{ if(k!==SHELL) return caches.delete(k); }))).then(()=>self.clients.claim())); });
-function timeoutFetch(req, ms){ return new Promise(function(resolve, reject){ var done=false; var t=setTimeout(function(){ if(!done){ done=true; reject(new Error('timeout')); } }, ms); fetch(req).then(function(r){ if(!done){ done=true; clearTimeout(t); resolve(r); } }).catch(function(err){ if(!done){ done=true; clearTimeout(t); reject(err); } }); }); }
-self.addEventListener('fetch',e=>{ if(e.request.method!=='GET') return; const u=new URL(e.request.url); if(u.pathname==='/'||u.pathname.endsWith('.html')){ e.respondWith(timeoutFetch(e.request, 10000).then(function(r){ var copy=r.clone(); caches.open(SHELL).then(function(c){ c.put('/index.html', copy); }); return r; }).catch(function(){ return caches.match('/index.html'); })); } });
