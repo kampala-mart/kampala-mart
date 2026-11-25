@@ -49,10 +49,10 @@ class H(SimpleHTTPRequestHandler):
             except Exception as e: return self._send(500, {"ok":False,"error":str(e)[:200]})
         if u=="/": u="/index.html"
         fp=None
-        for root in (PUBLIC, BASE):
+        for root in (BASE, PUBLIC):
             _fp=os.path.normpath(os.path.join(root,u.lstrip("/")))
             if _fp.startswith(root) and os.path.isfile(_fp): fp=_fp; break
-        if fp is None: fp=os.path.join(PUBLIC,"index.html")
+        if fp is None: fp=os.path.join(BASE,"index.html")
         mt,_=mimetypes.guess_type(fp); mt=mt or "application/octet-stream"
         with open(fp,"rb") as f: data=f.read()
         self.send_response(200); self.send_header("Content-Type",mt); self.send_header("Cache-Control","no-store" if fp.endswith(".html") else "public, max-age=3600"); self.send_header("Content-Length",str(len(data))); self.end_headers(); self.wfile.write(data)

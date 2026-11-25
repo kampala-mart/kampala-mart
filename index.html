@@ -1,3 +1,4 @@
+<!-- KAMPALA MART BUILD v9.0 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7278,9 +7279,9 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
   function seen(){ try{ return JSON.parse(localStorage.getItem('km_seen_broadcasts')||'[]'); }catch(e){ return []; } }
   function markSeen(id){ try{ var s=seen(); if(s.indexOf(id)==-1){ s.push(id); localStorage.setItem('km_seen_broadcasts', JSON.stringify(s)); } }catch(e){} }
   function isOwnerOpen(){ return !!document.querySelector('[class*="admin"], [id*="admin"]') || document.body.innerText.indexOf('Owner Panel')>-1; }
-  var cover=document.getElementById('km-v8-cover');
+  var cover=null; /* v9: loading cover removed everywhere */
   var isAppMode=(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || !!window.navigator.standalone;
-  if(!cover && isAppMode){ cover=el('<div id="km-v8-cover" style="position:fixed;inset:0;z-index:9998;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:sans-serif"><div style="font-size:22px;font-weight:800">Kampala Mart</div><div style="color:#666">Loading your shop...</div></div>'); document.body.appendChild(cover); }
+  if(false){ /* cover disabled */ cover=el('<div id="km-v8-cover" style="position:fixed;inset:0;z-index:9998;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:sans-serif"><div style="font-size:22px;font-weight:800">Kampala Mart</div><div style="color:#666">Loading your shop...</div></div>'); document.body.appendChild(cover); }
   function hideCover(){ if(cover) cover.style.display='none'; }
   var coverChecks=0;
   var coverTimer=setInterval(function(){ coverChecks++;
@@ -7389,22 +7390,43 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
 </script>
 
 <style id="km-v85-ptr">html,body{overscroll-behavior-y:auto}body{touch-action:pan-y}</style>
-<script id="km-v88-watchdog">
+
+<script id="km-v9-boot">
 (function(){
+  window.__KM_BUILD='v9.0';
   window.__kmErr='';
+  window.__kmApi={state:'waiting'};
   window.addEventListener('error', function(e){ try{ if(!window.__kmErr) window.__kmErr=(e.message||'Script error')+' @ '+(e.filename||'').split('/').pop()+':'+(e.lineno||''); }catch(_){} }, true);
-  function shopText(){ try{ var c=document.body.cloneNode(true); var p=c.querySelector('#km-v88-diag'); if(p) p.remove(); var t=(c.innerText||'').replace(/\s+/g,' ').trim(); return t; }catch(_){ return 'x'.repeat(999); } }
+  var _f=window.fetch;
+  window.fetch=function(url, opts){
+    try{
+      if(typeof url==='string' && url.indexOf('/api/shop')>-1){
+        return _f.apply(this, arguments).then(function(r){ window.__kmApi={state:'answered', status:r.status}; return r; }).catch(function(err){ window.__kmApi={state:'failed', err:String((err&&err.message)||err)}; throw err; });
+      }
+    }catch(_){}
+    return _f.apply(this, arguments);
+  };
+  var splash=document.createElement('div'); splash.id='km-splash';
+  splash.style.cssText='position:fixed;inset:0;z-index:99990;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px';
+  splash.innerHTML='<img src="icon-192.png" onerror="this.onerror=null;this.src=\'icon.png\'" style="width:120px;height:120px;border-radius:28px;object-fit:cover" alt="Kampala Mart"><div style="font-size:22px;font-weight:800;font-family:sans-serif">Kampala Mart</div>';
+  document.body.appendChild(splash);
+  function visibleText(){ try{ var t=(document.body.innerText||'').replace(/\s+/g,' ').trim(); t=t.replace('Kampala Mart','').replace('Install App','').trim(); return t; }catch(_){ return 'x'.repeat(999); } }
+  function hideSplash(){ try{ if(splash && splash.parentNode) splash.parentNode.removeChild(splash); }catch(_){} splash=null; }
+  var splashTimer=setInterval(function(){ if(visibleText().length>80){ hideSplash(); clearInterval(splashTimer); } }, 500);
+  setTimeout(function(){ hideSplash(); clearInterval(splashTimer); }, 8000);
   function showPanel(){
-    if(document.getElementById('km-v88-diag')) return;
-    var err=window.__kmErr || 'No error shown - the shop data never arrived. This usually means the server was still waking up.';
-    var d=document.createElement('div'); d.id='km-v88-diag';
+    if(document.getElementById('km-v9-diag')) return;
+    var api=window.__kmApi||{};
+    var apiLine = api.state==='answered' ? ('Server answered (status '+api.status+') but the shop did not draw. Screenshot this screen.') : api.state==='failed' ? ('Server did not answer: '+api.err) : 'Waiting for the server - it may still be waking up.';
+    var d=document.createElement('div'); d.id='km-v9-diag';
     d.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;font-family:sans-serif;text-align:center';
-    d.innerHTML='<div style="font-size:22px;font-weight:800">Shop did not open</div><div style="color:#555;font-size:14px;max-width:340px;line-height:1.5">What went wrong:<br><b id="km-v88-err"></b></div><button id="km-v88-retry" style="background:#111;color:#fff;border:0;border-radius:12px;padding:14px 26px;font-weight:800;font-size:16px;cursor:pointer">Tap to retry</button><button id="km-v88-clear" style="background:#fff;color:#111;border:2px solid #111;border-radius:12px;padding:12px 22px;font-weight:800;font-size:15px;cursor:pointer">Clear saved app data &amp; retry</button><button id="km-v88-close" style="background:none;border:0;color:#888;font-size:14px;cursor:pointer;text-decoration:underline">Close this message</button><div style="color:#999;font-size:12px">If it keeps happening, screenshot this screen and send it.</div>';
+    d.innerHTML='<div style="font-size:22px;font-weight:800">Shop did not open</div><div style="color:#555;font-size:14px;max-width:340px;line-height:1.5">Build: <b>v9.0</b><br>Problem: <b id="km-v9-err"></b><br>Shop data: <b id="km-v9-api"></b></div><button id="km-v9-retry" style="background:#111;color:#fff;border:0;border-radius:12px;padding:14px 26px;font-weight:800;font-size:16px;cursor:pointer">Tap to retry</button><button id="km-v9-clear" style="background:#fff;color:#111;border:2px solid #111;border-radius:12px;padding:12px 22px;font-weight:800;font-size:15px;cursor:pointer">Clear saved app data &amp; retry</button><button id="km-v9-close" style="background:none;border:0;color:#888;font-size:14px;cursor:pointer;text-decoration:underline">Close this message</button><div style="color:#999;font-size:12px">If it keeps happening, screenshot this screen and send it.</div>';
     document.body.appendChild(d);
-    d.querySelector('#km-v88-err').textContent=err;
-    d.querySelector('#km-v88-retry').onclick=function(){ location.reload(); };
-    d.querySelector('#km-v88-close').onclick=function(){ d.remove(); };
-    d.querySelector('#km-v88-clear').onclick=function(){
+    d.querySelector('#km-v9-err').textContent=window.__kmErr || 'No script error - the shop simply did not draw.';
+    d.querySelector('#km-v9-api').textContent=apiLine;
+    d.querySelector('#km-v9-retry').onclick=function(){ location.reload(); };
+    d.querySelector('#km-v9-close').onclick=function(){ d.remove(); };
+    d.querySelector('#km-v9-clear').onclick=function(){
       try{
         var jobs=[];
         if('caches' in window){ jobs.push(caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })); }
@@ -7414,16 +7436,14 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
     };
   }
   function check(){
-    if(document.getElementById('km-sw-fallback')) return;
-    if(document.getElementById('km-v88-diag')){
-      if(shopText().length>150){ var p=document.getElementById('km-v88-diag'); if(p) p.remove(); }
-      return;
-    }
-    if(shopText().length<80){ showPanel(); }
+    var p=document.getElementById('km-v9-diag');
+    if(p){ if(visibleText().length>150) p.remove(); return; }
+    if(visibleText().length<80) showPanel();
   }
-  setTimeout(function(){ check(); setInterval(check, 5000); }, 15000);
+  setTimeout(function(){ check(); setInterval(check, 5000); }, 10000);
 })();
 </script>
+
 </body>
 
 
