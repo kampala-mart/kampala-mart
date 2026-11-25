@@ -1,7 +1,7 @@
-import json, os, mimetypes, threading
+import json, os, mimetypes, threading, time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
-BASE=os.path.dirname(os.path.abspath(__file__)); PUBLIC=os.path.join(BASE,"public"); DATA_FILE=os.path.join(BASE,"data.json"); LOCK=threading.Lock(); DB_URL=os.environ.get("DATABASE_URL",""); _pg=None
+BASE=os.path.dirname(os.path.abspath(__file__)); PUBLIC=os.path.join(BASE,"public"); DATA_FILE=os.path.join(BASE,"data.json"); LOCK=threading.Lock(); PRESENCE={}; DB_URL=os.environ.get("DATABASE_URL",""); _pg=None
 def pg_conn():
     global _pg
     if _pg is None:
@@ -13,7 +13,7 @@ def pg_conn():
     return _pg
 def _normalize(d):
     if not isinstance(d,dict): d={}
-    for k,v in [("products",[]),("settings",{}),("ads",{}),("banners",[]),("categories",[]),("locations",[]),("chats",[]),("users",[]),("payments",[]),("broadcasts",[])]: d.setdefault(k,v)
+    for k,v in [("products",[]),("settings",{}),("ads",{}),("banners",[]),("categories",[]),("locations",[]),("chats",[]),("users",[]),("payments",[]),("broadcasts",[]),("reviews",[])]: d.setdefault(k,v)
     return d
 def load():
     if DB_URL:
@@ -44,6 +44,14 @@ class H(SimpleHTTPRequestHandler):
         if u in ("/api/shop","/api/shop/"):
             try: return self._send(200, load())
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
+        if u=="/api/presence":
+            try:
+                now=time.time()
+                with LOCK:
+                    for k in list(PRESENCE.keys()):
+                        if now-(PRESENCE[k].get("ts") or 0)>300: del PRESENCE[k]
+                    return self._send(200, dict(PRESENCE))
+            except Exception as e: return self._send(500, {"error": str(e)[:200]})
         if u in ("/api/health","/health"):
             try: d=load(); return self._send(200, {"ok":True,"storage":"postgres" if DB_URL else "local-file","products":len(d.get("products") or [])})
             except Exception as e: return self._send(500, {"ok":False,"error":str(e)[:200]})
@@ -60,6 +68,14 @@ class H(SimpleHTTPRequestHandler):
     def do_POST(self): self._write()
     def _write(self):
         u=urlparse(self.path).path
+        if u=="/api/presence":
+            try:
+                n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
+                d=json.loads(raw or b"{}")
+                if not isinstance(d,dict) or not d.get("id"): return self._send(400,{"error":"id required"})
+                with LOCK: PRESENCE[str(d["id"])]={"name":d.get("name") or "","avatar":d.get("avatar") or "","ts":time.time()}
+                return self._send(200,{"ok":True})
+            except Exception as e: return self._send(400,{"error":str(e)[:200]})
         if u not in ("/api/shop","/api/shop/"): return self._send(404,{"error":"not found"})
         n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
         try: data=json.loads(raw or b"{}")
