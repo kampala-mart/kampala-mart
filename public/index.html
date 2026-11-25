@@ -7387,7 +7387,42 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
   })();
 </script>
 
-<style id="km-v85-ptr">html,body{overscroll-behavior-y:auto}body{touch-action:pan-y}</style></body>
+<style id="km-v85-ptr">html,body{overscroll-behavior-y:auto}body{touch-action:pan-y}</style>
+<script id="km-v88-watchdog">
+(function(){
+  window.__kmErr='';
+  window.addEventListener('error', function(e){ try{ if(!window.__kmErr) window.__kmErr=(e.message||'Script error')+' @ '+(e.filename||'').split('/').pop()+':'+(e.lineno||''); }catch(_){} }, true);
+  function shopText(){ try{ var c=document.body.cloneNode(true); var p=c.querySelector('#km-v88-diag'); if(p) p.remove(); var t=(c.innerText||'').replace(/\s+/g,' ').trim(); return t; }catch(_){ return 'x'.repeat(999); } }
+  function showPanel(){
+    if(document.getElementById('km-v88-diag')) return;
+    var err=window.__kmErr || 'No error shown - the shop data never arrived. This usually means the server was still waking up.';
+    var d=document.createElement('div'); d.id='km-v88-diag';
+    d.style.cssText='position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;font-family:sans-serif;text-align:center';
+    d.innerHTML='<div style="font-size:22px;font-weight:800">Shop did not open</div><div style="color:#555;font-size:14px;max-width:340px;line-height:1.5">What went wrong:<br><b id="km-v88-err"></b></div><button id="km-v88-retry" style="background:#111;color:#fff;border:0;border-radius:12px;padding:14px 26px;font-weight:800;font-size:16px;cursor:pointer">Tap to retry</button><button id="km-v88-clear" style="background:#fff;color:#111;border:2px solid #111;border-radius:12px;padding:12px 22px;font-weight:800;font-size:15px;cursor:pointer">Clear saved app data &amp; retry</button><button id="km-v88-close" style="background:none;border:0;color:#888;font-size:14px;cursor:pointer;text-decoration:underline">Close this message</button><div style="color:#999;font-size:12px">If it keeps happening, screenshot this screen and send it.</div>';
+    document.body.appendChild(d);
+    d.querySelector('#km-v88-err').textContent=err;
+    d.querySelector('#km-v88-retry').onclick=function(){ location.reload(); };
+    d.querySelector('#km-v88-close').onclick=function(){ d.remove(); };
+    d.querySelector('#km-v88-clear').onclick=function(){
+      try{
+        var jobs=[];
+        if('caches' in window){ jobs.push(caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })); }
+        if('serviceWorker' in navigator){ jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); })); }
+        Promise.all(jobs).then(function(){ location.reload(); }).catch(function(){ location.reload(); });
+      }catch(_){ location.reload(); }
+    };
+  }
+  function check(){
+    if(document.getElementById('km-v88-diag')){
+      if(shopText().length>150){ var p=document.getElementById('km-v88-diag'); if(p) p.remove(); }
+      return;
+    }
+    if(shopText().length<80){ showPanel(); }
+  }
+  setTimeout(function(){ check(); setInterval(check, 5000); }, 25000);
+})();
+</script>
+</body>
 
 
 </html>
