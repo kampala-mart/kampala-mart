@@ -390,9 +390,13 @@ class H(SimpleHTTPRequestHandler):
             with LOCK:
                 d = load()
                 if body.get("type") == "notifications":
-                    for x in (d.get("notifications") or []):
-                        if not x.get("userId") or str(x.get("userId")) == uid or (body.get("isOwner") and x.get("forOwner")):
-                            x["read"] = True
+                    ids = {str(x) for x in (body.get("ids") or [])}
+                    if body.get("mode") == "delete" or ids:
+                        d["notifications"] = [x for x in (d.get("notifications") or []) if not (str(x.get("id")) in ids or (not ids and (not x.get("userId") or str(x.get("userId")) == uid or (body.get("isOwner") and x.get("forOwner")))))]
+                    else:
+                        for x in (d.get("notifications") or []):
+                            if not x.get("userId") or str(x.get("userId")) == uid or (body.get("isOwner") and x.get("forOwner")):
+                                x["read"] = True
                 elif body.get("type") == "chats":
                     for c in (d.get("chats") or []):
                         if body.get("chatId") and str(c.get("id")) != str(body.get("chatId")): continue
@@ -412,6 +416,10 @@ class H(SimpleHTTPRequestHandler):
             with LOCK:
                 d = load(); settings = d.get("settings") or {}
                 prod = None
+                _mode = str(settings.get("paymentMode") or settings.get("mode") or settings.get("payMode") or settings.get("listingMode") or "").lower()
+                _creds = bool((settings.get("mtnSubscriptionKey") and settings.get("mtnApiUser") and settings.get("mtnApiKey")) or (settings.get("airtelClientId") and settings.get("airtelClientSecret")) or settings.get("bankApiUrl"))
+                if "auto" in _mode and not (settings.get("apiVerified") and _creds):
+                    return self._send(400, {"ok": False, "error": "Automatic payment is ON but the API is not connected yet. The owner must add the API keys and press Test API Connection in Owner Panel first."})
                 for p in (d.get("products") or []):
                     if str(p.get("id")) == str(data.get("productId")): prod = p; break
                 amount = data.get("amount")
@@ -434,17 +442,6 @@ class H(SimpleHTTPRequestHandler):
         if not isinstance(data,dict): return self._send(400,{"error":"shop must be an object"})
         with LOCK:
             cur=load()
-            try:
-                st = (data.get("settings") or cur.get("settings") or {})
-                mode = str(st.get("paymentMode") or st.get("mode") or st.get("payMode") or st.get("listingMode") or "").lower()
-                creds = bool((st.get("mtnSubscriptionKey") and st.get("mtnApiUser") and st.get("mtnApiKey")) or (st.get("airtelClientId") and st.get("airtelClientSecret")) or st.get("bankApiUrl"))
-                if "auto" in mode and not (st.get("apiVerified") and creds):
-                    old_ids = {str(p.get("id")) for p in (cur.get("products") or [])}
-                    new_ids = [p.get("id") for p in (data.get("products") or []) if str(p.get("id")) not in old_ids]
-                    if new_ids: return self._send(403, {"error": "API_BLOCKED", "message": "Automatic payment is ON but the API is not connected yet. The owner must add API keys and test the API in Owner Panel first. No products can be uploaded until the API works."})
-            except Exception as _e:
-                if isinstance(_e, Exception) and "API_BLOCKED" in str(getattr(_e, "args", [""])[0]): raise
-                pass
             if isinstance(data.get("products"),list) and len(data["products"])==0 and isinstance(cur.get("products"),list) and len(cur["products"])>0 and not data.get("allowEmpty"):
                 return self._send(409,{"error":"refusing to overwrite live shop with empty products","products":len(cur["products"])})
             deleted = set()

@@ -8370,19 +8370,136 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
       }
     }
   },1500);
-  // ---- Block uploads in Automatic mode until the API is connected AND tested ----
-  document.addEventListener("click",function(e){
-    if(!blockedAuto()) return;
-    var t=e.target; var btn=t.closest? t.closest("button, a"):null; var txt=btn? (btn.textContent||"").trim():"";
-    var form=t.closest? t.closest("form"):null; var inUpload = form && /Upload Product/i.test(form.innerText||"");
-    if(inUpload || /Sell|Upload Product/.test(txt)){
-      e.preventDefault(); e.stopPropagation();
-      if(document.getElementById("km-block-overlay")) return;
-      var ov=document.createElement("div"); ov.id="km-block-overlay"; ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
-      ov.innerHTML="<div style='background:#fff;border-radius:14px;padding:22px;max-width:420px'><h3 style='margin:0 0 8px'>Automatic payment is ON</h3><p style='margin:0 0 14px'>But the API is not connected yet. The owner must add the API keys and press <b>Test API Connection</b> in Owner Panel first. No products can be uploaded until the API works.</p><button id='km-block-close' type='button' class='submit'>OK</button></div>";
-      document.body.appendChild(ov);
-      document.getElementById("km-block-close").onclick=function(){ ov.remove(); };
+  
+})();
+</script>
+
+<script>
+(function(){
+  function settings6(){ try{ return (window.__kmSnap&&window.__kmSnap.settings)||{}; }catch(e){ return {}; } }
+  function creds6(){ var s=settings6(); return !!((s.mtnSubscriptionKey&&s.mtnApiUser&&s.mtnApiKey)||(s.airtelClientId&&s.airtelClientSecret)||s.bankApiUrl); }
+  function modeAuto6(){ var s=settings6(); var m=String(s.paymentMode||s.mode||s.payMode||s.listingMode||window.__kmPaymentMode||"").toLowerCase(); return m.indexOf("auto")>=0; }
+  function blocked6(){ return modeAuto6() && !(settings6().apiVerified && creds6()); }
+  setInterval(function(){
+    // Gate message ONLY inside the Automatic payment panel. Never on product buttons, never in Manual mode.
+    var st=document.getElementById("km-auto-status");
+    if(st){
+      var btns=[document.getElementById("km-auto-mtn"), document.getElementById("km-auto-airtel")];
+      if(blocked6()){
+        if(st.textContent.indexOf("API is not connected")<0) st.textContent="Automatic payment is ON but the API is not connected yet. The owner must add the API keys and press Test API Connection in Owner Panel first.";
+        btns.forEach(function(b){ if(b){ b.style.opacity="0.45"; b.style.pointerEvents="none"; } });
+      } else {
+        btns.forEach(function(b){ if(b){ b.style.opacity=""; b.style.pointerEvents=""; } });
+      }
     }
+    // Owner Panel fallback v2: also when the Owner tab is open but the main area is empty (footer only)
+    try{
+      var isOwnerPage = /owner/i.test(document.title||"") || /owner|admin/i.test(location.hash+location.pathname);
+      var sess=null; try{ sess=JSON.parse(localStorage.getItem("km_session")||"null"); }catch(e){}
+      var ph=sess? String(sess.phone||sess.phoneNumber||"").replace(/[^0-9]/g,""):"";
+      var owner = ph==="0732172222"||ph==="732172222"||(sess&&sess.role==="owner");
+      if(owner && isOwnerPage && !document.getElementById("km-owner-fallback")){
+        var main=document.querySelector("main");
+        var mainTxt=main? (main.innerText||"").replace(/\s+/g," ").trim():"";
+        var shell=document.querySelector(".admin-shell");
+        var shellTxt=shell? (shell.innerText||"").replace(/\s+/g," ").trim():"";
+        if((main && mainTxt.length<80) || (shell && shellTxt.length<80)){
+          var fb=document.createElement("div"); fb.id="km-owner-fallback"; fb.style.cssText="background:#fff;border:2px solid #38BDF8;border-radius:14px;padding:18px;margin:12px";
+          fb.innerHTML="<h2 style='margin:0 0 6px'>Owner Panel</h2><p style='margin:0 0 12px'>Payment mode and API settings. Saved to the server - every user sees your changes.</p>"+
+          "<label>Payment mode <select id='km-fb-mode' style='width:100%;padding:10px;margin:6px 0 12px'><option value='free'>Free</option><option value='paid'>Paid</option></select></label>"+
+          "<label>Payment type <select id='km-fb-paytype' style='width:100%;padding:10px;margin:6px 0 12px'><option value='manual'>Manual</option><option value='automatic'>Automatic</option></select></label>"+
+          "<div id='km-fb-status' style='font-weight:700;margin-bottom:10px'></div>"+
+          "<button id='km-fb-save' type='button' class='submit'>Save to Server</button> <button id='km-fb-test' type='button' class='submit' style='background:#0F766E'>Test API Connection</button>";
+          var foot=document.querySelector("footer");
+          if(main) main.appendChild(fb); else if(shell) shell.appendChild(fb); else if(foot) document.body.insertBefore(fb, foot); else document.body.appendChild(fb);
+          var s2=settings6(); document.getElementById("km-fb-mode").value=String(s2.paymentMode||s2.mode||"free").toLowerCase().indexOf("paid")>=0?"paid":"free";
+          document.getElementById("km-fb-paytype").value=modeAuto6()?"automatic":"manual";
+          document.getElementById("km-fb-status").textContent = creds6()? (s2.apiVerified? "API connected and tested. Automatic uploads unblocked." : "API keys saved but not tested yet - press Test API Connection.") : "No API keys yet. Add them in the API panel below, then Test.";
+          document.getElementById("km-fb-save").onclick=function(){ fetch("/api/shop").then(function(r){return r.json();}).then(function(cur){ var ns=cur.settings||{}; var mv=document.getElementById("km-fb-mode").value; var pv=document.getElementById("km-fb-paytype").value; ns.paymentMode=mv; ns.mode=mv; ns.payMode=pv; ns.listingMode=mv; cur.settings=ns; return fetch("/api/shop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cur)}); }).then(function(){ document.getElementById("km-fb-status").textContent="Saved to server."; }).catch(function(){ document.getElementById("km-fb-status").textContent="Could not save - check connection."; }); };
+          document.getElementById("km-fb-test").onclick=function(){ var st2=document.getElementById("km-fb-status"); st2.textContent="Testing the real API... please wait."; fetch("/api/pay/test").then(function(r){return r.json();}).then(function(j){ st2.textContent = j.apiVerified? "API works. Automatic payments are now unblocked." : "API not working yet: "+JSON.stringify(j.providers||{}).slice(0,300); }); };
+          var panel=document.getElementById("km-api-panel"); if(panel){ fb.appendChild(panel); panel.style.display=""; }
+        }
+      }
+    }catch(e){}
+  },1500);
+})();
+</script>
+
+<script>
+(function(){
+  // Keep a global copy of the shop snapshot so this patch can read settings
+  try{
+    if(!window.__kmSnap7){
+      window.__kmSnap7=null;
+      var _f7=window.fetch;
+      window.fetch=function(){ var a=arguments; return _f7.apply(this,a).then(function(r){ try{ if(String(a[0]||"").indexOf("/api/shop")>=0){ r.clone().json().then(function(j){ window.__kmSnap7=j; }).catch(function(){}); } }catch(e){} return r; }); };
+    }
+  }catch(e){}
+  function me7(){ try{ var s=JSON.parse(localStorage.getItem("km_session")||"null"); return s||{}; }catch(e){ return {}; } }
+  function isOwner7(){ var m=me7(); var ph=String(m.phone||m.phoneNumber||"").replace(/[^0-9]/g,""); return ph==="0732172222"||ph==="732172222"||m.role==="owner"; }
+  function delNotifs(){
+    var m=me7(); var uid=String(m.id||m.phone||m.phoneNumber||"");
+    fetch("/api/read",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"notifications",userId:uid,isOwner:isOwner7(),mode:"delete"})}).catch(function(){});
+    if(window.__kmSnap7) window.__kmSnap7.notifications=[];
+    // remove the notification cards from the open panel at once
+    try{
+      var btns=document.querySelectorAll("button");
+      btns.forEach(function(b){ if((b.textContent||"").trim()==="Mark all as read"){ var p=b.parentNode; while(p && p!==document.body){ var t=(p.innerText||""); if(t.indexOf("Tap to open")>=0){ p.querySelectorAll("*").forEach(function(el){ if((el.innerText||"").indexOf("Tap to open")>=0 && el.children.length<6){ el.remove(); } }); break; } p=p.parentNode; } } });
+    }catch(e){}
+  }
+  // "Mark all as read" -> notifications disappear (deleted on server), not just marked
+  document.addEventListener("click",function(e){
+    var t=e.target; var el=t.closest? t.closest("button, a, [role=button]"):null;
+    if(el && (el.textContent||"").trim()==="Mark all as read"){ setTimeout(delNotifs, 50); }
+    // tapping one notification removes just that card
+    if(el && /Tap to open/i.test(el.innerText||"")){ setTimeout(function(){ try{ el.remove(); }catch(err){} }, 30); }
+  },true);
+  // Panel closed after being open -> clear the notifications that were just seen
+  var wasOpen=false;
+  setInterval(function(){
+    var open=false;
+    try{ document.querySelectorAll("button").forEach(function(b){ if((b.textContent||"").trim()==="Mark all as read") open=true; }); }catch(e){}
+    if(wasOpen && !open){ delNotifs(); }
+    wasOpen=open;
+    // Automatic pay panel gate (uses the global snapshot): message only inside the pay panel
+    try{
+      var st=document.getElementById("km-auto-status");
+      if(st){
+        var s=(window.__kmSnap7&&window.__kmSnap7.settings)||{};
+        var mode=String(s.paymentMode||s.mode||s.payMode||s.listingMode||window.__kmPaymentMode||"").toLowerCase();
+        var creds=!!((s.mtnSubscriptionKey&&s.mtnApiUser&&s.mtnApiKey)||(s.airtelClientId&&s.airtelClientSecret)||s.bankApiUrl);
+        var blocked = mode.indexOf("auto")>=0 && !(s.apiVerified && creds);
+        var b1=document.getElementById("km-auto-mtn"), b2=document.getElementById("km-auto-airtel");
+        if(blocked){
+          if(st.textContent.indexOf("API is not connected")<0) st.textContent="Automatic payment is ON but the API is not connected yet. The owner must add the API keys and press Test API Connection in Owner Panel first.";
+          [b1,b2].forEach(function(b){ if(b){ b.style.opacity="0.45"; b.style.pointerEvents="none"; } });
+        } else { [b1,b2].forEach(function(b){ if(b){ b.style.opacity=""; b.style.pointerEvents=""; } }); }
+      }
+    }catch(e){}
+  },1200);
+  // ---- Phone menu: "My Shop" must open the real "My Products" page ----
+  document.addEventListener("click",function(e){
+    try{
+      var t=e.target; var btn=t.closest? t.closest("#km-drawer-fixed button[data-km-key]"):null;
+      if(!btn) return;
+      var key=btn.getAttribute("data-km-key")||"";
+      if(key!=="my shop" && key!=="messages") return;
+      e.stopPropagation(); e.preventDefault();
+      var d=document.getElementById("km-drawer-fixed"); if(d) d.classList.remove("km-open");
+      var wants = key==="my shop" ? ["my products","my product","my shop"] : ["my chats","messages","chats"];
+      var found=null;
+      var all=document.querySelectorAll("button, a");
+      for(var w=0; w<wants.length && !found; w++){
+        for(var i=0;i<all.length;i++){
+          var b=all[i];
+          if(b.id==="km-menu-fixed"||b.id==="km-sell-fixed") continue;
+          if(b.closest && b.closest("#km-drawer-fixed")) continue;
+          var label=((b.getAttribute("aria-label")||"")+" "+(b.title||"")+" "+(b.textContent||"")).toLowerCase();
+          if(label.indexOf(wants[w])!==-1){ found=b; break; }
+        }
+      }
+      if(found) found.click();
+    }catch(err){}
   },true);
 })();
 </script>
