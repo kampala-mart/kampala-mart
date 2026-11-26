@@ -260,8 +260,32 @@ def load():
     try:
         with open(DATA_FILE) as f: return _normalize(json.load(f))
     except Exception: return _normalize({})
+
+def _dedupe_notifs(ns):
+    by_id = {}
+    for n in (ns or []):
+        if not isinstance(n, dict): continue
+        i = n.get("id")
+        if i in by_id:
+            old = by_id[i]; old["read"] = bool(old.get("read") or n.get("read"))
+            if str(n.get("createdAt") or "") >= str(old.get("createdAt") or ""):
+                m = dict(n); m["read"] = old["read"]; by_id[i] = m
+        else: by_id[i] = dict(n)
+    seen = {}; out = []
+    for n in sorted(by_id.values(), key=lambda x: str(x.get("createdAt") or "")):
+        k = (n.get("type"), n.get("productId"), n.get("chatId"), n.get("title"), n.get("message"))
+        if k in seen:
+            prev = seen[k]; prev["read"] = bool(prev.get("read") or n.get("read"))
+            if str(n.get("createdAt") or "") > str(prev.get("createdAt") or ""):
+                for kk, vv in n.items():
+                    if kk != "read": prev[kk] = vv
+        else: seen[k] = n; out.append(n)
+    return out
+
 def save(data):
     data=_normalize(data)
+    try: data["notifications"]=_dedupe_notifs(data.get("notifications") or [])
+    except Exception: pass
     if DB_URL:
         try:
             with pg_conn().cursor() as c: c.execute("INSERT INTO shop (id, data) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data", [json.dumps(data)])
@@ -285,6 +309,23 @@ class H(SimpleHTTPRequestHandler):
         b=json.dumps(obj).encode(); self.send_response(code); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(b))); self.send_header("Cache-Control","no-store"); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
         u=urlparse(self.path).path
+        if u == "/api/pay/test":
+            try:
+                with LOCK: d = load(); settings = d.get("settings") or {}
+                res = {}
+                if settings.get("mtnSubscriptionKey") and settings.get("mtnApiUser") and settings.get("mtnApiKey"):
+                    try: tok, err = _mtn_token(settings); res["mtn"] = {"ok": bool(tok), "error": err}
+                    except Exception as e: res["mtn"] = {"ok": False, "error": str(e)[:200]}
+                if settings.get("airtelClientId") and settings.get("airtelClientSecret"):
+                    try: tok, err = _airtel_token(settings); res["airtel"] = {"ok": bool(tok), "error": err}
+                    except Exception as e: res["airtel"] = {"ok": False, "error": str(e)[:200]}
+                if settings.get("bankApiUrl"): res["bank"] = {"ok": True, "note": "Bank API URL saved - it is tested when a bank payment starts"}
+                ok = any(v.get("ok") for v in res.values())
+                with LOCK:
+                    d = load(); d.setdefault("settings", {})["apiVerified"] = bool(ok); save(d)
+                return self._send(200, {"ok": ok, "providers": res, "apiVerified": bool(ok)})
+            except Exception as e: return self._send(500, {"error": str(e)[:200]})
+
         if u in ("/api/shop","/api/shop/"):
             try: return self._send(200, _get_shop())
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
@@ -339,8 +380,31 @@ class H(SimpleHTTPRequestHandler):
                 with LOCK: PRESENCE[str(d["id"])]={"name":d.get("name") or "","avatar":d.get("avatar") or "","ts":time.time()}
                 return self._send(200,{"ok":True})
             except Exception as e: return self._send(400,{"error":str(e)[:200]})
+
+        if u == "/api/read":
+            try:
+                n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
+                body=json.loads(raw or b"{}")
+            except Exception: return self._send(400, {"error": "invalid json"})
+            uid = str(body.get("userId") or body.get("user") or "")
+            with LOCK:
+                d = load()
+                if body.get("type") == "notifications":
+                    for x in (d.get("notifications") or []):
+                        if not x.get("userId") or str(x.get("userId")) == uid or (body.get("isOwner") and x.get("forOwner")):
+                            x["read"] = True
+                elif body.get("type") == "chats":
+                    for c in (d.get("chats") or []):
+                        if body.get("chatId") and str(c.get("id")) != str(body.get("chatId")): continue
+                        msgs = c.get("messages") or []
+                        if msgs:
+                            c.setdefault("lastReadBy", {})[uid] = msgs[-1].get("id") or msgs[-1].get("text") or ""
+                save(d)
+            return self._send(200, {"ok": True})
         if u == "/api/pay/initiate":
-            try: data = json.loads(raw or b"{}")
+            try:
+                n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
+                data = json.loads(raw or b"{}")
             except Exception: return self._send(400, {"error": "invalid json"})
             phone = _norm_phone(data.get("phone"))
             if len(phone) != 12: return self._send(400, {"ok": False, "error": "Enter a valid MTN / Airtel number, e.g. 0771234567"})
@@ -370,6 +434,17 @@ class H(SimpleHTTPRequestHandler):
         if not isinstance(data,dict): return self._send(400,{"error":"shop must be an object"})
         with LOCK:
             cur=load()
+            try:
+                st = (data.get("settings") or cur.get("settings") or {})
+                mode = str(st.get("paymentMode") or st.get("mode") or st.get("payMode") or st.get("listingMode") or "").lower()
+                creds = bool((st.get("mtnSubscriptionKey") and st.get("mtnApiUser") and st.get("mtnApiKey")) or (st.get("airtelClientId") and st.get("airtelClientSecret")) or st.get("bankApiUrl"))
+                if "auto" in mode and not (st.get("apiVerified") and creds):
+                    old_ids = {str(p.get("id")) for p in (cur.get("products") or [])}
+                    new_ids = [p.get("id") for p in (data.get("products") or []) if str(p.get("id")) not in old_ids]
+                    if new_ids: return self._send(403, {"error": "API_BLOCKED", "message": "Automatic payment is ON but the API is not connected yet. The owner must add API keys and test the API in Owner Panel first. No products can be uploaded until the API works."})
+            except Exception as _e:
+                if isinstance(_e, Exception) and "API_BLOCKED" in str(getattr(_e, "args", [""])[0]): raise
+                pass
             if isinstance(data.get("products"),list) and len(data["products"])==0 and isinstance(cur.get("products"),list) and len(cur["products"])>0 and not data.get("allowEmpty"):
                 return self._send(409,{"error":"refusing to overwrite live shop with empty products","products":len(cur["products"])})
             deleted = set()

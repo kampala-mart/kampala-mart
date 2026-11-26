@@ -8313,6 +8313,79 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
 })();
 </script>
 
+
+<script>
+(function(){
+  var SNAP=null;
+  var _of=window.fetch;
+  window.fetch=function(){ var a=arguments; return _of.apply(this,a).then(function(r){ try{ var u=String(a[0]||""); if(u.indexOf("/api/shop")>=0){ var c=r.clone(); c.json().then(function(j){ SNAP=j; }).catch(function(){}); } }catch(e){} return r; }); };
+  function me(){ try{ var s=JSON.parse(localStorage.getItem("km_session")||"null")||JSON.parse(localStorage.getItem("km_user")||"null"); return s||{}; }catch(e){ return {}; } }
+  function isOwner(){ var m=me(); var ph=String(m.phone||m.phoneNumber||""); ph=ph.replace(/[^0-9]/g,""); return ph==="0732172222"||ph==="732172222"||m.role==="owner"||m.isOwner===true||m.admin===true; }
+  function settings(){ return (SNAP&&SNAP.settings)||{}; }
+  function creds(){ var s=settings(); return !!( (s.mtnSubscriptionKey&&s.mtnApiUser&&s.mtnApiKey) || (s.airtelClientId&&s.airtelClientSecret) || s.bankApiUrl ); }
+  function modeAuto(){ var s=settings(); var m=String(s.paymentMode||s.mode||s.payMode||s.listingMode||window.__kmPaymentMode||"").toLowerCase(); return m.indexOf("auto")>=0; }
+  function blockedAuto(){ return modeAuto() && !(settings().apiVerified && creds()); }
+  function markRead(type){ var m=me(); var uid=String(m.id||m.phone||m.phoneNumber||""); if(!uid) return; fetch("/api/read",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type,userId:uid,isOwner:isOwner()})}).catch(function(){}); if(type==="notifications"&&SNAP&&SNAP.notifications){ SNAP.notifications.forEach(function(n){ n.read=true; }); } var b=document.querySelectorAll(".bell-count"); b.forEach(function(el){ el.style.display="none"; }); }
+  // bell / Mark-all-as-read clicks -> persist read on server
+  document.addEventListener("click",function(e){ var t=e.target; var el=t.closest? t.closest("button, a, [role=button]"):null; var txt=((el&&el.textContent)||"").trim(); if(txt.indexOf("Mark all as read")>=0 || (el&&/bell|notification/i.test(el.getAttribute("aria-label")||el.className||""))){ markRead("notifications"); } },true);
+  // chats page open -> mark chats read on server (throttled)
+  var lastChatMark=0;
+  setInterval(function(){
+    var bodyTxt=document.body? document.body.innerText||"":"";
+    if(bodyTxt.indexOf("My Chats")>=0 || document.querySelector(".chat-msg,[class*=chat-window]")){
+      var now=Date.now(); if(now-lastChatMark>8000){ lastChatMark=now; markRead("chats"); }
+    }
+    // ---- API panel: NEVER on the public shop. Only inside Owner Panel, only for owner ----
+    var panel=document.getElementById("km-api-panel");
+    var shell=document.querySelector(".admin-shell");
+    var ownerPage = !!(shell || /owner|admin|panel/i.test(location.hash+location.pathname));
+    if(panel){
+      if(!isOwner() || !ownerPage){ panel.style.display="none"; }
+      else if(shell && panel.parentNode!==shell){ shell.appendChild(panel); panel.style.display=""; }
+      else if(shell){ panel.style.display=""; }
+      // Test API button inside the API panel
+      if(!document.getElementById("km-ap-test")){
+        var btn=document.createElement("button"); btn.id="km-ap-test"; btn.type="button"; btn.className="submit"; btn.style.marginTop="10px"; btn.textContent="Test API Connection";
+        var st=document.createElement("div"); st.id="km-ap-test-status"; st.style.marginTop="8px"; st.style.fontWeight="700";
+        btn.onclick=function(){ st.textContent="Testing the real API... please wait."; fetch("/api/pay/test").then(function(r){return r.json();}).then(function(j){ if(j.apiVerified){ st.style.color="#14532D"; st.textContent="API works. Automatic uploads are now unblocked."; } else { st.style.color="#B91C1C"; st.textContent="API not working yet: "+JSON.stringify(j.providers||{}).slice(0,300); } }).catch(function(){ st.textContent="Could not reach the server."; }); };
+        panel.appendChild(btn); panel.appendChild(st);
+      }
+    }
+    // ---- Owner Panel fallback: if Owner Panel renders blank, show a working panel ----
+    if(isOwner() && ownerPage && shell && !document.getElementById("km-owner-fallback")){
+      var txt=(shell.innerText||"").replace(/\s+/g," ").trim();
+      if(txt.length<80){
+        var fb=document.createElement("div"); fb.id="km-owner-fallback"; fb.style.cssText="background:#fff;border:2px solid #38BDF8;border-radius:14px;padding:18px;margin:12px 0";
+        fb.innerHTML="<h2 style='margin:0 0 6px'>Owner Panel</h2><p style='margin:0 0 12px'>Payment mode and API settings. Saved to the server - every user sees your changes.</p>"+
+        "<label>Payment mode <select id='km-fb-mode' style='width:100%;padding:10px;margin:6px 0 12px'><option value='free'>Free</option><option value='paid'>Paid</option></select></label>"+
+        "<label>Payment type <select id='km-fb-paytype' style='width:100%;padding:10px;margin:6px 0 12px'><option value='manual'>Manual</option><option value='automatic'>Automatic</option></select></label>"+
+        "<div id='km-fb-status' style='font-weight:700;margin-bottom:10px'></div>"+
+        "<button id='km-fb-save' type='button' class='submit'>Save to Server</button> <button id='km-fb-test' type='button' class='submit' style='background:#0F766E'>Test API Connection</button>";
+        shell.appendChild(fb);
+        var s2=settings(); document.getElementById("km-fb-mode").value=String(s2.paymentMode||s2.mode||"free").toLowerCase().indexOf("paid")>=0?"paid":"free";
+        document.getElementById("km-fb-paytype").value=modeAuto()?"automatic":"manual";
+        document.getElementById("km-fb-status").textContent = creds()? (s2.apiVerified? "API connected and tested. Automatic uploads unblocked." : "API keys saved but not tested yet - press Test API Connection.") : "No API keys yet. Add them in the API panel below, then Test.";
+        document.getElementById("km-fb-save").onclick=function(){ fetch("/api/shop").then(function(r){return r.json();}).then(function(cur){ var ns=cur.settings||{}; var mv=document.getElementById("km-fb-mode").value; var pv=document.getElementById("km-fb-paytype").value; ns.paymentMode=mv; ns.mode=mv; ns.payMode=pv; ns.listingMode=mv; cur.settings=ns; return fetch("/api/shop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cur)}); }).then(function(){ document.getElementById("km-fb-status").textContent="Saved to server."; }).catch(function(){ document.getElementById("km-fb-status").textContent="Could not save - check connection."; }); };
+        document.getElementById("km-fb-test").onclick=function(){ var st2=document.getElementById("km-fb-status"); st2.textContent="Testing the real API... please wait."; fetch("/api/pay/test").then(function(r){return r.json();}).then(function(j){ st2.textContent = j.apiVerified? "API works. Automatic uploads are now unblocked." : "API not working yet: "+JSON.stringify(j.providers||{}).slice(0,300); }); };
+      }
+    }
+  },1500);
+  // ---- Block uploads in Automatic mode until the API is connected AND tested ----
+  document.addEventListener("click",function(e){
+    if(!blockedAuto()) return;
+    var t=e.target; var btn=t.closest? t.closest("button, a"):null; var txt=btn? (btn.textContent||"").trim():"";
+    var form=t.closest? t.closest("form"):null; var inUpload = form && /Upload Product/i.test(form.innerText||"");
+    if(inUpload || /Sell|Upload Product/.test(txt)){
+      e.preventDefault(); e.stopPropagation();
+      if(document.getElementById("km-block-overlay")) return;
+      var ov=document.createElement("div"); ov.id="km-block-overlay"; ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
+      ov.innerHTML="<div style='background:#fff;border-radius:14px;padding:22px;max-width:420px'><h3 style='margin:0 0 8px'>Automatic payment is ON</h3><p style='margin:0 0 14px'>But the API is not connected yet. The owner must add the API keys and press <b>Test API Connection</b> in Owner Panel first. No products can be uploaded until the API works.</p><button id='km-block-close' type='button' class='submit'>OK</button></div>";
+      document.body.appendChild(ov);
+      document.getElementById("km-block-close").onclick=function(){ ov.remove(); };
+    }
+  },true);
+})();
+</script>
 </body>
 
 
