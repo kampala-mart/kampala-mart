@@ -5817,7 +5817,7 @@ var kmCloudLoadOnce={current:!1};
   // Google-first load
   y.useEffect(()=>{ try{ var gu=kmGoogleUrl(); fetch("/api/shop").then((r)=>r.json()).then((j)=>{ var d=(j&&j.result)?((typeof j.result==="string")?JSON.parse(j.result):j.result):(j&&j.data?j.data:j); if(d&&Array.isArray(d.products)&&d.products.length){ try{ W(d.products.filter(function(pp){ return window.__kmTombstoneIds().indexOf(pp.id)===-1; })); }catch(e){} try{kmRenderAutoSave.loaded=true; kmSetCloud((o)=>({...o,status:"Loaded from Render cloud — this is the real shared shop."}));}catch(e){} } }).catch(()=>{}); }catch(e){} }, []);
 
-y.useEffect(()=>{if(kmCloudLoadOnce.current)return;kmCloudLoadOnce.current=!0;var base="";var _kmKey="";var kmCloud={enabled:!0,url:base,key:_kmKey};fetch("/api/shop").then((r)=>r.json()).then((rows)=>{var d=(rows&&Array.isArray(rows)&&rows[0]&&rows[0].data)?rows[0].data:rows;if(d&&d.settings&&typeof d.settings==="object"){try{t((pr)=>({...pr,...d.settings}));}catch(e){}try{if(window.__kmApplyCloudSettings)window.__kmApplyCloudSettings(d.settings);}catch(e){}}if(d&&Array.isArray(d.chats)){try{P(d.chats);}catch(e){}}if(d&&Array.isArray(d.users)){try{V(d.users);}catch(e){}if(d&&Array.isArray(d.payments)){try{Y(d.payments);}catch(e){}}try{var ss=JSON.parse(localStorage.getItem("km_session")||"null");if(ss&&ss.phone){var fu=d.users.find(function(u){return u.phone&&u.phone.trim()===ss.phone.trim()&&u.password===ss.password;});if(fu){if(fu.blocked){w(null);try{localStorage.removeItem("km_session");localStorage.removeItem("km_session_user");}catch(e){}}else{w(fu);try{localStorage.setItem("km_session_user",JSON.stringify(fu));}catch(e){}}}}}catch(e){}}if(d&&Array.isArray(d.products)&&d.products.length){W(d.products.filter(function(pp){ return window.__kmTombstoneIds().indexOf(pp.id)===-1; }));if(Array.isArray(d.banners)&&d.banners.length){window.__kmBannerList=d.banners.slice();if(d.banners[0])Dd((pr)=>({...pr,imageUrl:d.banners[0]}));}if(d.ads&&typeof d.ads==="object")kmSetAds((o)=>({...o,...d.ads}));if(Array.isArray(d.categories)&&d.categories.length){kmApplyCats(d.categories);kmSetCats({list:d.categories,newName:""});}if(Array.isArray(d.locations)&&d.locations.length){kmApplyLocs(d.locations);kmSetLocs({list:d.locations,newName:""});}kmRenderAutoSave.loaded=true; kmSetCloud((o)=>({...o,status:"Loaded from cloud — this is the real shared shop."}));}else{ try{ var bk=JSON.parse(localStorage.getItem("km_products_backup")||"null"); if(Array.isArray(bk)&&bk.length){ W(bk.filter(function(pp){ return window.__kmTombstoneIds().indexOf(pp.id)===-1; })); kmSetCloud((o)=>({...o,status:"Cloud empty - restored "+bk.length+" products from this browser. Tap Save This Shop to Cloud Now to push them to everyone."})); }else{ kmSetCloud((o)=>({...o,status:"Cloud empty — tap Save to Cloud Now to upload this shop."})); } }catch(e){ kmSetCloud((o)=>({...o,status:"Cloud empty — tap Save to Cloud Now to upload this shop."})); } }}).catch(()=>{kmSetCloud((o)=>({...o,status:"Could not load from cloud — check URL / key / SQL."}));});},[kmCloud.enabled,kmCloud.url,kmCloud.key]);
+y.useEffect(()=>{if(kmCloudLoadOnce.current)return;kmCloudLoadOnce.current=!0;var base="";var _kmKey="";var kmCloud={enabled:!0,url:base,key:_kmKey};fetch("/api/shop").then((r)=>r.json()).then((rows)=>{var d=(rows&&Array.isArray(rows)&&rows[0]&&rows[0].data)?rows[0].data:rows;if(d&&d.settings&&typeof d.settings==="object"){try{t((pr)=>({...pr,...d.settings}));}catch(e){}try{if(window.__kmApplyCloudSettings)window.__kmApplyCloudSettings(d.settings);}catch(e){}}if(d&&Array.isArray(d.chats)){try{P(d.chats);}catch(e){}}if(d&&Array.isArray(d.users)){try{V(d.users);}catch(e){}if(d&&Array.isArray(d.payments)){try{Y(d.payments);}catch(e){}}try{var ss=JSON.parse(localStorage.getItem("km_session")||"null");if(ss&&ss.phone){var fu=d.users.find(function(u){return u.phone&&u.phone.trim()===ss.phone.trim()&&u.password===ss.password;});if(fu){if(fu.blocked){w(null);try{localStorage.removeItem("km_session");localStorage.removeItem("km_session_user");}catch(e){}}else{w(fu);if(fu.phone==="0732172222"||fu.isOwner||fu.role==="owner")pu(!0);try{localStorage.setItem("km_session_user",JSON.stringify(fu));}catch(e){}}}}}catch(e){}}if(d&&Array.isArray(d.products)&&d.products.length){W(d.products.filter(function(pp){ return window.__kmTombstoneIds().indexOf(pp.id)===-1; }));if(Array.isArray(d.banners)&&d.banners.length){window.__kmBannerList=d.banners.slice();if(d.banners[0])Dd((pr)=>({...pr,imageUrl:d.banners[0]}));}if(d.ads&&typeof d.ads==="object")kmSetAds((o)=>({...o,...d.ads}));if(Array.isArray(d.categories)&&d.categories.length){kmApplyCats(d.categories);kmSetCats({list:d.categories,newName:""});}if(Array.isArray(d.locations)&&d.locations.length){kmApplyLocs(d.locations);kmSetLocs({list:d.locations,newName:""});}kmRenderAutoSave.loaded=true; kmSetCloud((o)=>({...o,status:"Loaded from cloud — this is the real shared shop."}));}else{ try{ var bk=JSON.parse(localStorage.getItem("km_products_backup")||"null"); if(Array.isArray(bk)&&bk.length){ W(bk.filter(function(pp){ return window.__kmTombstoneIds().indexOf(pp.id)===-1; })); kmSetCloud((o)=>({...o,status:"Cloud empty - restored "+bk.length+" products from this browser. Tap Save This Shop to Cloud Now to push them to everyone."})); }else{ kmSetCloud((o)=>({...o,status:"Cloud empty — tap Save to Cloud Now to upload this shop."})); } }catch(e){ kmSetCloud((o)=>({...o,status:"Cloud empty — tap Save to Cloud Now to upload this shop."})); } }}).catch(()=>{kmSetCloud((o)=>({...o,status:"Could not load from cloud — check URL / key / SQL."}));});},[kmCloud.enabled,kmCloud.url,kmCloud.key]);
 
 var kmCatState=y.useState({list:[],newName:""});
 var kmCats=kmCatState[0];
@@ -8501,6 +8501,343 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
       if(found) found.click();
     }catch(err){}
   },true);
+})();
+</script>
+
+
+
+
+
+<script>
+(function(){
+  var TABS=[["overview","Overview"],["approvals","Approvals"],["users","Users"],["products","Products"],["payments","Payments"],["payset","Payments Settings"],["notifications","Notifications"],["support","Support Messages"],["settings","Settings"],["boost","Boost / Upgrade"],["social","Social Links"],["ads","Ads / Earn"],["cloud","Cloud Sync"],["cats","Categories"],["locs","Locations"],["api","Automatic API"],["push","Push & Broadcast"]];
+  var TAB="overview", CUR=null;
+  function sess(){ var out={}; ["km_session_user","km_session","km_user"].forEach(function(k){ try{ var v=JSON.parse(localStorage.getItem(k)||"null"); if(v) out=Object.assign(out,v); }catch(e){} }); return out; }
+  function isOwner(){ var s=sess(); var ph=String(s.phone||s.phoneNumber||"").replace(/[^0-9]/g,""); return ph==="0732172222"||ph==="732172222"||ph==="256732172222"||s.role==="owner"||s.isOwner===true; }
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function money(n){ var v=Number(n)||0; return "UGX "+v.toLocaleString("en-UG"); }
+  function apiGet(){ return fetch("/api/shop").then(function(r){return r.json();}); }
+  function apiPut(c){ return fetch("/api/shop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(c)}); }
+  function st(t){ var el=document.getElementById("km11-status"); if(el) el.textContent=t; }
+  function pendingProds(){ return (CUR.products||[]).filter(function(p){ var x=String(p.status||"").toLowerCase(); return x==="pending"||x==="pending_verification"||x==="draft"||x==="under review"||x==="under_review"; }); }
+  function refresh(){ return apiGet().then(function(c){ CUR=c; renderTab(); }).catch(function(){ st("Could not load shop from server - check internet."); }); }
+  function save(mut, msg){
+    st("Saving to server...");
+    apiGet().then(function(c){ mut(c); return apiPut(c); }).then(function(){ st(msg||"Saved to server - every user sees it now."); return refresh(); }).catch(function(){ st("Could not save - check connection."); });
+  }
+  function tabBar(){
+    return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">'+TABS.map(function(t){
+      var badge="";
+      if(t[0]==="approvals" && pendingProds().length) badge=" ("+pendingProds().length+")";
+      var sup=CUR.supportMessages||(CUR.settings&&CUR.settings.supportMessages)||[];
+      if(t[0]==="support" && sup.filter(function(m){return m.status!=="Resolved";}).length) badge=" ("+sup.filter(function(m){return m.status!=="Resolved";}).length+")";
+      return '<button type="button" data-tab="'+t[0]+'" style="padding:9px 13px;border-radius:999px;border:1px solid '+(TAB===t[0]?"#0284C7":"#CBD5E1")+';background:'+(TAB===t[0]?"#0284C7":"#fff")+';color:'+(TAB===t[0]?"#fff":"#111")+';font-weight:800;cursor:pointer">'+t[1]+badge+'</button>';
+    }).join("")+'</div>';
+  }
+  function field(label, id, val, type, ph){ return '<label style="display:block;margin:6px 0;font-weight:700">'+label+'<input id="'+id+'" type="'+(type||"text")+'" value="'+esc(val||"")+'" placeholder="'+esc(ph||"")+'" style="width:100%;padding:10px;margin-top:4px;border:1px solid #CBD5E1;border-radius:9px"></label>'; }
+  function feeFor(p){
+    var tiers=(CUR.settings&&CUR.settings.feeTiers)||[];
+    var price=Number(p.price)||0; var f=0;
+    for(var i=0;i<tiers.length;i++){ if(tiers[i].max==null||price<=tiers[i].max){ f=tiers[i].fee||0; break; } }
+    return f;
+  }
+  function renderTab(){
+    var body=document.getElementById("km11-body"); if(!body||!CUR) return;
+    var s=CUR.settings||{}; var h="";
+    if(TAB==="overview"){
+      var live=(CUR.products||[]).filter(function(p){return String(p.status)==="live";}).length;
+      var fees=(CUR.payments||[]).filter(function(p){var x=String(p.status||"").toLowerCase(); return x==="verified"||x==="successful"||x==="confirmed";}).reduce(function(a,p){return a+(Number(p.amount)||0);},0);
+      h='<div style="display:flex;flex-wrap:wrap;gap:10px">'+
+        '<div style="border:1px solid #E2E8F0;border-radius:12px;padding:14px;min-width:150px"><div>Total users</div><b style="font-size:22px">'+(CUR.users||[]).length+'</b></div>'+
+        '<div style="border:1px solid #E2E8F0;border-radius:12px;padding:14px;min-width:150px"><div>Total products</div><b style="font-size:22px">'+(CUR.products||[]).length+'</b><div>'+live+' live</div></div>'+
+        '<div style="border:1px solid #E2E8F0;border-radius:12px;padding:14px;min-width:150px"><div>Listing fees collected</div><b style="font-size:22px">'+money(fees)+'</b><div>Verified payments only</div></div>'+
+        '<div style="border:1px solid #E2E8F0;border-radius:12px;padding:14px;min-width:150px"><div>Total chats</div><b style="font-size:22px">'+(CUR.chats||[]).length+'</b></div>'+
+        '<div style="border:1px solid #E2E8F0;border-radius:12px;padding:14px;min-width:150px"><div>Awaiting confirmation</div><b style="font-size:22px">'+pendingProds().length+'</b></div></div>'+
+        '<h3>Recent payments</h3>'+((CUR.payments||[]).slice(0,4).map(function(p){ return '<div style="border-bottom:1px solid #E2E8F0;padding:8px 0"><b>'+esc(p.productTitle||"")+'</b> - '+esc(p.userName||"")+' - '+esc(p.date||"")+' - <b>'+money(p.amount)+'</b> - '+esc(p.method||"")+' - '+esc(p.status||"")+'</div>'; }).join("")||"<p>No payments yet.</p>");
+    }
+    if(TAB==="approvals"){
+      var pend=pendingProds();
+      h='<h3>Pending Approvals ('+pend.length+')</h3><p>Newest first. Approve to publish the product, or Reject to remove it.</p>';
+      if(!pend.length) h+="<p>No products waiting for approval.</p>";
+      pend.forEach(function(p,i){
+        var pay=(CUR.payments||[]).filter(function(x){return String(x.productId)===String(p.id);})[0]||{};
+        h+='<div style="border:1px solid #E2E8F0;border-radius:12px;padding:12px;margin:8px 0" data-pidx="'+i+'"><b>'+esc(p.name||p.title||"Product")+'</b><div>Seller: '+esc(p.sellerName||p.manualPayerName||"")+' - Phone: '+esc(p.sellerPhone||p.paymentPhone||"")+'</div><div>Method: '+esc(p.paymentMethod||pay.method||"-")+' - Transaction ID: '+esc(p.paymentReference||pay.transactionId||"-")+' - Amount: '+money(pay.amount||p.manualAmount||0)+' - Fee: '+money(feeFor(p))+'</div><div>Submitted: '+esc(p.submittedAtLabel||pay.date||"-")+'</div><div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="submit" data-appr="'+i+'">Approve</button><button type="button" class="danger" data-rej="'+i+'">Reject</button></div></div>';
+      });
+    }
+    if(TAB==="users"){
+      var us=CUR.users||[];
+      h='<h3>All users ('+us.length+')</h3><p>Search by name, phone or country. No passwords shown.</p><input id="km11-usearch" placeholder="Search name or phone..." style="width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:9px;margin-bottom:10px">';
+      h+='<div id="km11-ulist"></div>';
+      body.innerHTML=tabBar()+h;
+      var inp=document.getElementById("km11-usearch");
+      var drawUsers=function(q){
+        var list=us.filter(function(u){ if(!q) return true; q=q.toLowerCase(); return (String(u.name||"")+String(u.phone||"")+String(u.country||"")).toLowerCase().indexOf(q)>=0; });
+        document.getElementById("km11-ulist").innerHTML=list.map(function(u){
+          var prods=(CUR.products||[]).filter(function(p){return String(p.sellerId)===String(u.id);}).length;
+          return '<div style="border:1px solid #E2E8F0;border-radius:12px;padding:10px;margin:6px 0;display:flex;justify-content:space-between;gap:8px;align-items:center"><span><b>'+esc(u.name||"")+'</b> - '+esc(u.email||"-")+' - '+esc(u.country||"")+' - '+esc(u.phone||"")+' - '+(u.createdAt?new Date(u.createdAt).toLocaleDateString():"-")+' - '+esc(u.accountType||"")+' - Products: '+prods+(u.blocked?" - BLOCKED":"")+'</span><span style="display:flex;gap:6px"><button type="button" data-ver="'+esc(u.id||u.phone)+'">'+(u.verifiedId?"Verified ID":"Mark Verified ID")+'</button><button type="button" class="danger" data-blk="'+esc(u.id||u.phone)+'">'+(u.blocked?"Unblock":"Block")+'</button></span></div>';
+        }).join("")||"<p>No users.</p>";
+        document.querySelectorAll("[data-ver]").forEach(function(b){ b.onclick=function(){ var key=b.getAttribute("data-ver"); save(function(c){ (c.users||[]).forEach(function(x){ if(String(x.id)===key||String(x.phone)===key) x.verifiedId=!x.verifiedId; }); }, "Saved to server."); }; });
+        document.querySelectorAll("[data-blk]").forEach(function(b){ b.onclick=function(){ var key=b.getAttribute("data-blk"); save(function(c){ (c.users||[]).forEach(function(x){ if(String(x.id)===key||String(x.phone)===key) x.blocked=!x.blocked; }); }, "Saved to server."); }; });
+      };
+      drawUsers("");
+      inp.oninput=function(){ drawUsers(inp.value); };
+      wireTabs(); return;
+    }
+    if(TAB==="products"){
+      h='<h3>All products ('+(CUR.products||[]).length+')</h3><button type="button" class="submit" id="km11-apprall" style="margin-bottom:10px">Approve All Pending - make every seller product live</button>';
+      (CUR.products||[]).forEach(function(p,i){
+        h+='<div style="border:1px solid #E2E8F0;border-radius:12px;padding:10px;margin:6px 0;display:flex;justify-content:space-between;gap:8px;align-items:center"><span><b>'+esc(p.name||p.title||"")+'</b><div>'+esc(p.sellerName||"")+' - '+esc(p.sellerPhone||"")+' - '+esc(p.location||"")+'</div><div>'+money(p.price)+' - Fee '+money(p.feePaid||0)+' - '+esc(p.status||"")+'</div></span><button type="button" class="danger" data-del="'+i+'">Delete</button></div>';
+      });
+      body.innerHTML=tabBar()+h; wireTabs();
+      var ab=document.getElementById("km11-apprall");
+      if(ab) ab.onclick=function(){ var pend=pendingProds(); if(!pend.length){ st("No pending products - all are already live."); return; } save(function(c){ (c.products||[]).forEach(function(p){ var x=String(p.status||"").toLowerCase(); if(x==="pending"||x==="pending_verification"||x==="draft"||x==="under review"||x==="under_review"){ p.status="live"; p.feePaid=p.feePaid||0; p.sellerNotice="Approved - your product is now live!"; } }); }, pend.length+" product(s) approved - now live for everyone."); };
+      document.querySelectorAll("[data-del]").forEach(function(b){ b.onclick=function(){ var p=(CUR.products||[])[+b.getAttribute("data-del")]; if(!confirm("Delete this product for every user?")) return; save(function(c){ c.products=(c.products||[]).filter(function(x){ return String(x.id)!==String(p.id); }); }, "Deleted - gone for every user."); }; });
+      return;
+    }
+    if(TAB==="payments"){
+      var tot=(CUR.payments||[]).filter(function(p){var x=String(p.status||"").toLowerCase(); return x==="verified"||x==="successful"||x==="confirmed";}).reduce(function(a,p){return a+(Number(p.amount)||0);},0);
+      h='<h3>Fee Payments - Total verified collected: '+money(tot)+'</h3><p>Payments are verified automatically via API. When payment is confirmed, the product goes live automatically.</p>';
+      (CUR.payments||[]).forEach(function(p){ h+='<div style="border-bottom:1px solid #E2E8F0;padding:8px 0"><b>'+esc(p.productTitle||"")+'</b> - '+esc(p.date||"")+'<div>'+esc(p.userName||"")+' - '+esc(p.phone||"")+' - <b>'+money(p.amount)+'</b> - '+esc(p.method||"")+' - '+esc(p.provider||"-")+' - <b>'+esc(p.status||"")+'</b></div></div>'; });
+      if(!(CUR.payments||[]).length) h+="<p>No payments yet.</p>";
+    }
+    if(TAB==="payset"){
+      h='<h3>Payments Settings</h3>'+
+        '<label style="display:block;margin:6px 0;font-weight:700">Payment mode <select id="km11-mode" style="width:100%;padding:10px;margin-top:4px"><option value="free">Free</option><option value="paid">Paid</option></select></label>'+
+        '<label style="display:block;margin:6px 0;font-weight:700">Payment type <select id="km11-paytype" style="width:100%;padding:10px;margin-top:4px"><option value="manual">Manual</option><option value="automatic">Automatic</option></select></label>'+
+        '<h3>Payment Numbers</h3><p>These numbers show on the payment screen.</p>'+
+        field("MTN Merchant ID","km11-mtnmid", s.paymentNumbers&&s.paymentNumbers.mtnMerchantId, "text", "71149179")+
+        field("Business Name","km11-biz", s.paymentNumbers&&s.paymentNumbers.businessName, "text", "Kampala Mart")+
+        field("Names","km11-names", s.paymentNumbers&&s.paymentNumbers.ownerName, "text", "KATO HASSAN")+
+        field("Airtel Merchant ID","km11-airmid", s.paymentNumbers&&s.paymentNumbers.airtelMerchantId, "text", "7311025")+
+        '<h3>Bank Settings</h3>'+
+        field("Bank Name","km11-bankname", s.bank&&s.bank.bankName, "text", "Opportunity Bank")+
+        field("Account Name","km11-accname", s.bank&&s.bank.accountName)+
+        field("Account Number","km11-accnum", s.bank&&s.bank.accountNumber)+
+        '<h3>How verification works</h3><p>1. Manual: seller sends the fee to your MTN or Airtel number, then sends name, Transaction ID and amount.</p><p>2. Owner checks the submission in Pending Approvals and approves it.</p><p>3. Automatic: seller approves a prompt. When the backend is connected, a confirmed payment publishes automatically.</p>'+
+        '<button type="button" class="submit" id="km11-payset-save">Save Payment Settings</button>';
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.getElementById("km11-mode").value=String(s.paymentMode||s.mode||"free").toLowerCase().indexOf("paid")>=0?"paid":"free";
+      document.getElementById("km11-paytype").value=String(s.payMode||s.listingMode||"manual").toLowerCase().indexOf("auto")>=0?"automatic":"manual";
+      document.getElementById("km11-payset-save").onclick=function(){
+        save(function(c){ var ns=c.settings||{}; var mv=document.getElementById("km11-mode").value; var pv=document.getElementById("km11-paytype").value;
+          ns.paymentMode=mv; ns.mode=mv; ns.payMode=pv; ns.listingMode=mv;
+          ns.paymentNumbers={mtnMerchantId:document.getElementById("km11-mtnmid").value.trim(), businessName:document.getElementById("km11-biz").value.trim(), ownerName:document.getElementById("km11-names").value.trim(), airtelMerchantId:document.getElementById("km11-airmid").value.trim()};
+          ns.bank={bankName:document.getElementById("km11-bankname").value.trim(), accountName:document.getElementById("km11-accname").value.trim(), accountNumber:document.getElementById("km11-accnum").value.trim()};
+          c.settings=ns; }, "Payment settings saved to server.");
+      };
+      return;
+    }
+    if(TAB==="notifications"){
+      var subs=CUR.submissions||[];
+      h='<h3>Notifications ('+subs.length+')</h3><p>Every product submitted for review appears here with the fee, payer number and status.</p>';
+      subs.forEach(function(e,i){
+        h+='<div style="border:1px solid #E2E8F0;border-radius:12px;padding:10px;margin:6px 0"><b>New Submission: '+esc(e.productTitle||"")+' by '+esc(e.sellerName||"")+'</b><div>Fee '+money(e.amount)+' - Paid with number '+esc(e.phone||"")+' - Method '+esc(e.method||"")+' - Time '+esc(e.date||"")+'</div><div>Status: '+esc(e.status||"")+'</div><div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="submit" data-viewpay="'+i+'">View Payments</button><button type="button" class="danger" data-delsub="'+i+'">Delete</button></div></div>';
+      });
+      if(!subs.length) h+="<p>No submissions yet.</p>";
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.querySelectorAll("[data-viewpay]").forEach(function(b){ b.onclick=function(){ TAB="payments"; renderTab(); }; });
+      document.querySelectorAll("[data-delsub]").forEach(function(b){ b.onclick=function(){ var e=subs[+b.getAttribute("data-delsub")]; save(function(c){ c.submissions=(c.submissions||[]).filter(function(x){ return String(x.id)!==String(e.id); }); }, "Deleted."); }; });
+      return;
+    }
+    if(TAB==="support"){
+      var msgs=CUR.supportMessages||(CUR.settings&&CUR.settings.supportMessages)||[];
+      h='<h3>Support Messages ('+msgs.length+')</h3><p>Reply here. The customer sees your reply in Support > My Messages when logged in.</p>';
+      msgs.forEach(function(m,i){
+        var replyHtml = m.reply ? '<p style="background:#F0F9FF;padding:8px;border-radius:8px"><b>Your reply:</b> '+esc(m.reply)+'</p>' : '';
+        h+='<div style="border:1px solid #E2E8F0;border-radius:12px;padding:10px;margin:6px 0"><b>'+esc(m.topic||"")+' - '+esc(m.name||"")+'</b><div>Phone: '+esc(m.phone||"")+' - '+esc(m.date||"")+' - Status: '+esc(m.status||"Open")+'</div><p>'+esc(m.message||"")+'</p>'+replyHtml+'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" data-res="'+i+'">'+(m.status==="Resolved"?"Reopen":"Mark Resolved")+'</button><button type="button" class="submit" data-reply="'+i+'">Reply</button></div><div id="km11-reply-'+i+'" style="display:none;margin-top:8px"><textarea id="km11-replytxt-'+i+'" rows="3" style="width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:9px" placeholder="Type your reply...">'+esc(m.reply||"")+'</textarea><button type="button" class="submit" data-send="'+i+'" style="margin-top:6px">Send Reply</button></div></div>';
+      });
+      if(!msgs.length) h+="<p>No support messages yet.</p>";
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.querySelectorAll("[data-res]").forEach(function(b){ b.onclick=function(){ var m=msgs[+b.getAttribute("data-res")]; save(function(c){ var arr=c.supportMessages||(c.settings&&c.settings.supportMessages)||[]; arr.forEach(function(x){ if(String(x.id)===String(m.id)) x.status=x.status==="Resolved"?"Open":"Resolved"; }); c.supportMessages=arr; if(c.settings) c.settings.supportMessages=arr; }, "Saved to server."); }; });
+      document.querySelectorAll("[data-reply]").forEach(function(b){ b.onclick=function(){ var d=document.getElementById("km11-reply-"+b.getAttribute("data-reply")); if(d) d.style.display=d.style.display==="none"?"block":"none"; }; });
+      document.querySelectorAll("[data-send]").forEach(function(b){ b.onclick=function(){ var i=+b.getAttribute("data-send"); var txt=document.getElementById("km11-replytxt-"+i).value.trim(); if(!txt){ st("Type your reply first."); return; } var m=msgs[i]; save(function(c){ var arr=c.supportMessages||(c.settings&&c.settings.supportMessages)||[]; arr.forEach(function(x){ if(String(x.id)===String(m.id)){ x.reply=txt; x.status="Resolved"; } }); c.supportMessages=arr; if(c.settings) c.settings.supportMessages=arr; }, "Reply sent - customer sees it in Support."); }; });
+      return;
+    }
+    if(TAB==="settings"){
+      var tiers=s.feeTiers||[];
+      var bn=(CUR.banners&&CUR.banners[0])||s.banner||{};
+      h='<h3>Owner settings</h3>'+
+        field("New owner PIN (leave blank to keep current)","km11-pin","", "password", "New PIN")+
+        '<label style="display:block;margin:6px 0;font-weight:700">Fee note<textarea id="km11-feenote" rows="3" style="width:100%;padding:10px;margin-top:4px;border:1px solid #CBD5E1;border-radius:9px">'+esc(s.feeNote||"")+'</textarea></label>'+
+        '<button type="button" class="submit" id="km11-ownersave">Save settings</button>'+
+        '<h3>Listing Fee Settings</h3><p>Change any fee. New fees apply immediately to all new uploads.</p><div id="km11-tiers"></div>'+
+        '<button type="button" id="km11-addtier">+ Add fee row</button> <button type="button" class="submit" id="km11-feesave">Save Fee Settings</button>'+
+        '<h3>Current listing fees</h3>'+tiers.map(function(t){ return '<div>'+esc(t.label||"")+' - <b>'+money(t.fee)+'</b></div>'; }).join("")+
+        '<p>Buyer and seller arrange pickup or delivery themselves via chat / phone. No delivery fee is charged.</p>'+
+        '<h3>Listing Fee Payments</h3><p>Payments are collected via Mobile Money / Bank. Payers see "Pay Listing Fee via Mobile Money / Bank".</p>'+
+        '<h3>Banner Manager - only the owner can change this</h3>'+
+        field("Banner Title","km11-btitle", bn.title, "text", "Kampala Mart")+
+        field("Banner Subtitle","km11-bsub", bn.subtitle, "text", "Buy and sell in Kampala - from real people")+
+        field("Banner Button Text","km11-bbtn", bn.buttonText, "text", "Sell / Upload Product")+
+        '<label style="display:block;margin:6px 0;font-weight:700">Banner Background Color<input id="km11-bcolor" type="color" value="'+esc(bn.backgroundColor||"#5AB8FF")+'" style="width:100%;padding:6px;margin-top:4px"></label>'+
+        field("Banner Image URL (optional)","km11-bimg", bn.imageUrl, "text", "Paste an image link (optional)")+
+        '<label style="display:block;margin:6px 0;font-weight:700"><input id="km11-bhide" type="checkbox" '+(bn.hidden?"checked":"")+' style="margin-right:6px">Hide Banner</label>'+
+        '<div style="margin:8px 0;display:flex;gap:8px"><button type="button" class="submit" id="km11-bannersave">Save Banner</button><button type="button" id="km11-bannerreset">Reset Banner</button></div>';
+      body.innerHTML=tabBar()+h; wireTabs();
+      var tiersBox=document.getElementById("km11-tiers");
+      var drawTiers=function(){
+        tiersBox.innerHTML=tiers.map(function(t,i){ return '<div style="display:flex;gap:8px;margin:6px 0;align-items:center"><input data-tlabel="'+i+'" value="'+esc(t.label||"")+'" style="flex:1;padding:10px;border:1px solid #CBD5E1;border-radius:9px" placeholder="Label e.g. Up to 50,000"><input data-tmax="'+i+'" type="number" value="'+(t.max==null?"":t.max)+'" placeholder="Max price (blank = no limit)" style="flex:1;padding:10px;border:1px solid #CBD5E1;border-radius:9px"><input data-tfee="'+i+'" type="number" value="'+(t.fee||0)+'" placeholder="Fee" style="flex:1;padding:10px;border:1px solid #CBD5E1;border-radius:9px"><button type="button" class="danger" data-tdel="'+i+'">x</button></div>'; }).join("");
+        document.querySelectorAll("[data-tlabel]").forEach(function(el){ el.oninput=function(){ tiers[+el.getAttribute("data-tlabel")].label=el.value; }; });
+        document.querySelectorAll("[data-tmax]").forEach(function(el){ el.oninput=function(){ var v=el.value.trim(); tiers[+el.getAttribute("data-tmax")].max=v===""?null:(Number(v)||0); }; });
+        document.querySelectorAll("[data-tfee]").forEach(function(el){ el.oninput=function(){ tiers[+el.getAttribute("data-tfee")].fee=Number(el.value)||0; }; });
+        document.querySelectorAll("[data-tdel]").forEach(function(b){ b.onclick=function(){ tiers.splice(+b.getAttribute("data-tdel"),1); drawTiers(); }; });
+      };
+      drawTiers();
+      document.getElementById("km11-addtier").onclick=function(){ tiers.push({label:"",max:null,fee:0}); drawTiers(); };
+      document.getElementById("km11-ownersave").onclick=function(){
+        var pin=document.getElementById("km11-pin").value.trim();
+        save(function(c){ var ns=c.settings||{}; if(pin){ ns.ownerPin=pin; ns.pin=pin; } ns.feeNote=document.getElementById("km11-feenote").value; c.settings=ns; }, "Owner settings saved to server.");
+      };
+      document.getElementById("km11-feesave").onclick=function(){ save(function(c){ var ns=c.settings||{}; ns.feeTiers=tiers; c.settings=ns; }, "Fee settings saved - new fees apply to all new uploads."); };
+      document.getElementById("km11-bannersave").onclick=function(){
+        save(function(c){ var b={title:document.getElementById("km11-btitle").value.trim(), subtitle:document.getElementById("km11-bsub").value.trim(), buttonText:document.getElementById("km11-bbtn").value.trim(), backgroundColor:document.getElementById("km11-bcolor").value, imageUrl:document.getElementById("km11-bimg").value.trim(), hidden:document.getElementById("km11-bhide").checked}; c.banners=[b]; var ns=c.settings||{}; ns.banner=b; c.settings=ns; }, "Banner saved to server.");
+      };
+      document.getElementById("km11-bannerreset").onclick=function(){ save(function(c){ c.banners=[]; if(c.settings) c.settings.banner=null; }, "Banner reset."); };
+      return;
+    }
+    if(TAB==="boost"){
+      var bs=s.boost||CUR.boost||{};
+      var reqs=CUR.boostRequests||(s.boostRequests)||[];
+      h='<h3>Boost / Upgrade - Boost Settings</h3><p>Boosted products move to the front with a BOOSTED label.</p>'+
+        field("Week amount (UGX)","km11-bweek", bs.weekAmount, "number")+
+        field("Month amount (UGX)","km11-bmonth", bs.monthAmount, "number")+
+        field("Year amount (UGX)","km11-byear", bs.yearAmount, "number")+
+        '<label style="display:block;margin:6px 0;font-weight:700"><input id="km11-ben" type="checkbox" '+(bs.enabled?"checked":"")+' style="margin-right:6px">Boost enabled</label>'+
+        '<label style="display:block;margin:6px 0;font-weight:700">Boost mode<select id="km11-bmode" style="width:100%;padding:10px;margin-top:4px"><option value="manual">Manual</option><option value="auto">Automatic</option></select></label>'+
+        '<button type="button" class="submit" id="km11-boostsave">Save Boost Settings</button>'+
+        '<h3>Boost Approvals ('+reqs.length+')</h3>'+(reqs.length?"":"<p>No Boost requests yet - sellers send Boost requests from My Products > Upgrade / Boost.</p>");
+      reqs.forEach(function(r,i){
+        h+='<div style="border:1px solid #E2E8F0;border-radius:12px;padding:10px;margin:6px 0"><b>'+esc(r.productTitle||"")+'</b> - '+esc(r.userName||"")+' - '+esc(r.plan||"")+' - '+money(r.amount)+' - '+esc(r.status||"")+'<div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="submit" data-bappr="'+i+'">Approve Boost</button><button type="button" class="danger" data-brej="'+i+'">Reject</button></div></div>';
+      });
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.getElementById("km11-bmode").value=bs.feeMode||"manual";
+      document.getElementById("km11-boostsave").onclick=function(){
+        save(function(c){ var ns=c.settings||{}; ns.boost={weekAmount:Number(document.getElementById("km11-bweek").value)||0, monthAmount:Number(document.getElementById("km11-bmonth").value)||0, yearAmount:Number(document.getElementById("km11-byear").value)||0, enabled:document.getElementById("km11-ben").checked, feeMode:document.getElementById("km11-bmode").value}; c.settings=ns; c.boost=ns.boost; }, "Boost settings saved to server.");
+      };
+      document.querySelectorAll("[data-bappr]").forEach(function(b){ b.onclick=function(){ var r=reqs[+b.getAttribute("data-bappr")]; save(function(c){ var arr=c.boostRequests||((c.settings||{}).boostRequests)||[]; arr.forEach(function(x){ if(String(x.id)===String(r.id)){ x.status="approved"; } }); c.boostRequests=arr; if(c.settings) c.settings.boostRequests=arr; (c.products||[]).forEach(function(p){ if(String(p.id)===String(r.productId)){ p.boosted=true; p.boostPlan=r.plan||""; } }); }, "Boost approved."); }; });
+      document.querySelectorAll("[data-brej]").forEach(function(b){ b.onclick=function(){ var r=reqs[+b.getAttribute("data-brej")]; save(function(c){ var arr=c.boostRequests||((c.settings||{}).boostRequests)||[]; arr.forEach(function(x){ if(String(x.id)===String(r.id)) x.status="rejected"; }); c.boostRequests=arr; if(c.settings) c.settings.boostRequests=arr; }, "Boost rejected."); }; });
+      return;
+    }
+    if(TAB==="social"){
+      var so=s.social||{};
+      h='<h3>Social Links</h3><p>Footer reads these links. Leave blank to show the coming-soon message.</p>'+
+        field("TikTok URL","km11-so-tk", so.tiktok, "text", "https://tiktok.com/@kampalamart")+
+        field("YouTube URL","km11-so-yt", so.youtube, "text", "https://youtube.com/@kampalamart")+
+        field("Instagram URL","km11-so-ig", so.instagram, "text", "https://instagram.com/kampalamart")+
+        field("Twitter / X URL","km11-so-x", so.twitter, "text", "https://x.com/kampalamart")+
+        field("Facebook URL","km11-so-fb", so.facebook, "text", "https://facebook.com/kampalamart")+
+        '<button type="button" class="submit" id="km11-socialsave">Save Social Links</button>';
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.getElementById("km11-socialsave").onclick=function(){
+        save(function(c){ var ns=c.settings||{}; ns.social={tiktok:document.getElementById("km11-so-tk").value.trim(), youtube:document.getElementById("km11-so-yt").value.trim(), instagram:document.getElementById("km11-so-ig").value.trim(), twitter:document.getElementById("km11-so-x").value.trim(), facebook:document.getElementById("km11-so-fb").value.trim()}; c.settings=ns; }, "Social links saved to server.");
+      };
+      return;
+    }
+    if(TAB==="ads"){
+      var ad=CUR.ads||s.ads||{};
+      h='<h3>Ads / Earn - Owner Panel Only</h3><p>No code. Paste your Google AdSense ID once, turn ads ON, and Google ads show to visitors. Own paid banners are your own adverts.</p>'+
+        field("Google AdSense Publisher ID (ca-pub-...)","km11-adsid", ad.adsenseId||s.adsenseId, "text", "ca-pub-1234567890123456")+
+        '<label style="display:block;margin:6px 0;font-weight:700"><input id="km11-adson" type="checkbox" '+(ad.adsEnabled?"checked":"")+' style="margin-right:6px">Turn Google Ads ON</label>'+
+        '<label style="display:block;margin:6px 0;font-weight:700"><input id="km11-ownon" type="checkbox" '+(ad.ownAdsEnabled?"checked":"")+' style="margin-right:6px">Allow my own paid banners (someone pays me to advertise)</label>'+
+        field("My own banner price (UGX)","km11-ownprice", ad.ownAdPrice, "number", "50000")+
+        '<button type="button" class="submit" id="km11-adssave">Save Ads Settings</button>';
+      if(ad.adsEnabled&&ad.adsenseId) h+='<div style="margin-top:10px"><b>Google Ads: ON</b><div>Publisher: '+esc(ad.adsenseId)+'</div><p>Visitors will see Google ads in the Sponsored strip under the banner.</p></div>';
+      else h+='<p>Google Ads are OFF - no Google ads show until you paste your ID and turn them ON.</p>';
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.getElementById("km11-adssave").onclick=function(){
+        save(function(c){ var a={adsenseId:document.getElementById("km11-adsid").value.trim(), adsEnabled:document.getElementById("km11-adson").checked, ownAdsEnabled:document.getElementById("km11-ownon").checked, ownAdPrice:Number(document.getElementById("km11-ownprice").value)||0}; c.ads=a; var ns=c.settings||{}; ns.adsenseId=a.adsenseId; ns.ads=a; c.settings=ns; }, "Ads settings saved to server.");
+      };
+      return;
+    }
+    if(TAB==="cloud"){
+      h='<h3>Cloud Sync - Render Postgres (Built-in)</h3><p>No keys, no SQL, no setup. Your shop saves to Render Postgres automatically.</p><p>Status: Render cloud - ready.</p>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="submit" id="km11-cloudsave">Save This Shop to Cloud Now</button><button type="button" id="km11-cloudcheck">Check Cloud</button></div>'+
+        '<p>After Approve, Status must say Saved to cloud. If it says CLOUD SAVE FAILED, copy those exact words.</p>';
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.getElementById("km11-cloudsave").onclick=function(){ st("Saving to server..."); apiPut(CUR).then(function(){ st("Saved to cloud."); }).catch(function(){ st("Cloud save failed - check connection."); }); };
+      document.getElementById("km11-cloudcheck").onclick=function(){ apiGet().then(function(j){ st("Cloud check: "+((j.products||[]).length)+" products in Postgres."); }).catch(function(){ st("Cloud check failed - check internet."); }); };
+      return;
+    }
+    if(TAB==="cats"||TAB==="locs"){
+      var isCat=TAB==="cats"; var list=isCat?(CUR.categories||[]):(CUR.locations||[]);
+      h='<h3>'+(isCat?"Categories - Add or Remove":"Locations - Add or Remove Places")+'</h3><p>These show in the shop filter and in the SELL form. Changes apply to everyone after you save.</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">';
+      list.forEach(function(c,i){ var nm=typeof c==="string"?c:(c.name||c.title||""); h+='<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #E2E8F0;border-radius:999px">'+esc(nm)+' <button type="button" class="danger" data-rm="'+i+'" style="width:auto;padding:2px 8px">x</button></span>'; });
+      h+='</div><label style="display:block;margin:6px 0;font-weight:700">'+(isCat?"New category name":"New place name")+'<input id="km11-newitem" style="width:100%;padding:10px;margin-top:4px;border:1px solid #CBD5E1;border-radius:9px" placeholder="'+(isCat?"e.g. Baby Products":"e.g. Ssumbwe, Wakiso")+'"></label><button type="button" class="submit" id="km11-additem">'+(isCat?"Add Category":"Add Place")+'</button>';
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.querySelectorAll("[data-rm]").forEach(function(b){ b.onclick=function(){ var i=+b.getAttribute("data-rm"); save(function(c){ if(isCat) c.categories=(c.categories||[]).filter(function(_,j){return j!==i;}); else c.locations=(c.locations||[]).filter(function(_,j){return j!==i;}); }, "Removed - saved to server."); }; });
+      document.getElementById("km11-additem").onclick=function(){ var v=document.getElementById("km11-newitem").value.trim(); if(!v){ st("Type a name first."); return; } save(function(c){ if(isCat){ c.categories=c.categories||[]; c.categories.push(v); } else { c.locations=c.locations||[]; c.locations.push(v); } }, "Added - saved to server."); };
+      return;
+    }
+    if(TAB==="api"){
+      h='<h3>Automatic Payment API (owner only)</h3><p>Fill the keys, press Test API Connection. Automatic uploads stay blocked until the API works.</p>'+
+        field("MTN Subscription Key","km11-api-mtnsub", s.mtnSubscriptionKey)+
+        field("MTN API User","km11-api-mtnuser", s.mtnApiUser)+
+        field("MTN API Key","km11-api-mtnkey", s.mtnApiKey)+
+        field("Airtel Client ID","km11-api-airid", s.airtelClientId)+
+        field("Airtel Client Secret","km11-api-airsec", s.airtelClientSecret)+
+        field("Bank API URL","km11-api-bankurl", s.bankApiUrl)+
+        field("Bank API Key","km11-api-bankkey", s.bankApiKey)+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="submit" id="km11-apisave">Save API Keys</button><button type="button" class="submit" id="km11-apitest" style="background:#0F766E">Test API Connection</button></div>';
+      body.innerHTML=tabBar()+h; wireTabs();
+      var saveApi=function(cb){ save(function(c){ var ns=c.settings||{}; ns.mtnSubscriptionKey=document.getElementById("km11-api-mtnsub").value.trim(); ns.mtnApiUser=document.getElementById("km11-api-mtnuser").value.trim(); ns.mtnApiKey=document.getElementById("km11-api-mtnkey").value.trim(); ns.airtelClientId=document.getElementById("km11-api-airid").value.trim(); ns.airtelClientSecret=document.getElementById("km11-api-airsec").value.trim(); ns.bankApiUrl=document.getElementById("km11-api-bankurl").value.trim(); ns.bankApiKey=document.getElementById("km11-api-bankkey").value.trim(); c.settings=ns; if(cb) cb(); }, "API keys saved to server."); };
+      document.getElementById("km11-apisave").onclick=function(){ saveApi(); };
+      document.getElementById("km11-apitest").onclick=function(){
+        st("Saving keys, then testing the real API... please wait.");
+        saveApi(function(){ fetch("/api/pay/test").then(function(r){return r.json();}).then(function(j){ st(j.apiVerified?"API works. Automatic payments are now unblocked.":"API not working yet: "+JSON.stringify(j.providers||{}).slice(0,300)); }); });
+      };
+      return;
+    }
+    if(TAB==="push"){
+      var bcs=CUR.broadcasts||[];
+      h='<h3>Push & Broadcast</h3>'+
+        field("OneSignal App ID","km11-osid", s.onesignalAppId||s.oneSignalAppId, "text", "Paste App ID from OneSignal")+
+        '<p>REST API Key stays in this browser only - it is never saved to the server.</p>'+
+        '<button type="button" class="submit" id="km11-ossave">Save App ID</button>'+
+        '<h3>Send notification to ALL users</h3><p>Everyone sees this in the app instantly, even without refresh.</p>'+
+        '<textarea id="km11-bctext" rows="2" style="width:100%;padding:10px;border:1px solid #CBD5E1;border-radius:10px" placeholder="e.g. New phones just arrived! Open Kampala Mart now."></textarea>'+
+        '<button type="button" class="submit" id="km11-bcsend" style="margin-top:8px">Send to everyone</button>'+
+        '<h3>Recent broadcasts</h3>'+bcs.slice(-10).reverse().map(function(b){ return '<div style="border-bottom:1px solid #E2E8F0;padding:6px 0">'+esc(b.text||b.message||"")+' - '+esc(b.at||"")+'</div>'; }).join("");
+      body.innerHTML=tabBar()+h; wireTabs();
+      document.getElementById("km11-ossave").onclick=function(){ save(function(c){ var ns=c.settings||{}; ns.onesignalAppId=document.getElementById("km11-osid").value.trim(); ns.oneSignalAppId=ns.onesignalAppId; c.settings=ns; }, "App ID saved to server."); };
+      document.getElementById("km11-bcsend").onclick=function(){ var txt=document.getElementById("km11-bctext").value.trim(); if(!txt){ st("Type a message first."); return; } save(function(c){ var arr=Array.isArray(c.broadcasts)?c.broadcasts:[]; arr.push({id:"b-"+Date.now(), text:txt, at:new Date().toISOString()}); c.broadcasts=arr.slice(-20); }, "Sent to everyone."); };
+      return;
+    }
+    body.innerHTML=tabBar()+h; wireTabs();
+  }
+  function wireTabs(){
+    document.querySelectorAll("#km11-panel [data-tab]").forEach(function(b){ b.onclick=function(){ TAB=b.getAttribute("data-tab"); renderTab(); }; });
+    document.querySelectorAll("[data-appr]").forEach(function(b){ b.onclick=function(){ var p=pendingProds()[+b.getAttribute("data-appr")]; save(function(c){ (c.products||[]).forEach(function(x){ if(String(x.id)===String(p.id)){ x.status="live"; x.feePaid=x.feePaid||feeFor(x); x.sellerNotice="Payment confirmed. Your product is now live!"; } }); (c.submissions||[]).forEach(function(x){ if(String(x.productId)===String(p.id)) x.status="approved"; }); }, "Approved - now live for every user."); }; });
+    document.querySelectorAll("[data-rej]").forEach(function(b){ b.onclick=function(){ var p=pendingProds()[+b.getAttribute("data-rej")]; var reason=prompt("Reason (optional) - e.g. Payment could not be confirmed.","Payment could not be confirmed."); save(function(c){ (c.products||[]).forEach(function(x){ if(String(x.id)===String(p.id)){ x.status="rejected"; if(reason) x.rejectReason=reason; } }); (c.submissions||[]).forEach(function(x){ if(String(x.productId)===String(p.id)) x.status="rejected"; }); }, "Rejected."); }; });
+  }
+  function openPanel(){
+    try{
+      var old=document.getElementById("km11-panel"); if(old){ old.scrollIntoView(); return; }
+      var shell=document.querySelector(".admin-shell");
+      var box=document.createElement("div"); box.id="km11-panel";
+      box.style.cssText="background:#fff;border:2px solid #38BDF8;border-radius:14px;padding:18px;margin:12px;max-width:980px";
+      box.innerHTML="<h2 style='margin:0'>Owner Panel</h2><p style='margin:4px 0 0'>Every change here saves to the server - all users see it.</p><div id='km11-status' style='font-weight:700;margin:10px 0'></div><div id='km11-body'>Loading from server...</div>";
+      if(shell) shell.appendChild(box); else { var foot=document.querySelector("footer"); if(foot) document.body.insertBefore(box, foot); else document.body.appendChild(box); }
+      apiGet().then(function(c){ CUR=c; renderTab(); }).catch(function(){ st("Could not load shop from server - check internet."); });
+    }catch(e){}
+  }
+  setInterval(function(){
+    try{
+      if(isOwner() && !document.getElementById("km-owner-float")){
+        var b=document.createElement("button"); b.id="km-owner-float"; b.type="button"; b.textContent="Owner Panel";
+        b.style.cssText="position:fixed;left:12px;bottom:76px;z-index:99990;background:#0284C7;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)";
+        b.onclick=function(){
+          var sh=document.querySelector(".admin-shell");
+          if(sh && (sh.innerText||"").replace(/\s+/g," ").trim().length>=80 && !document.getElementById("km11-panel")){ sh.scrollIntoView(); return; }
+          openPanel();
+        };
+        document.body.appendChild(b);
+      }
+      var ownerPage=/owner/i.test(document.title||"")||/owner|admin/i.test(location.hash+location.pathname);
+      var shell=document.querySelector(".admin-shell");
+      var shellEmpty=shell && (shell.innerText||"").replace(/\s+/g," ").trim().length<80;
+      if(isOwner() && ownerPage && (!shell||shellEmpty) && !document.getElementById("km11-panel")){ openPanel(); }
+    }catch(e){}
+  },1000);
 })();
 </script>
 </body>
