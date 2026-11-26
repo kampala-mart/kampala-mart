@@ -1,16 +1,7 @@
 import json, os, mimetypes, threading, time, base64, uuid, urllib.request, urllib.error
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
-BASE=os.path.dirname(os.path.abspath(__file__)); PUBLIC=os.path.join(BASE,"public"); DATA_FILE=os.path.join(BASE,"data.json"); LOCK=threading.Lock(); PRESENCE={}; DB_URL=os.environ.get("DATABASE_URL",""); _pg=None
-def pg_conn():
-    global _pg
-    if _pg is None:
-        import psycopg2
-        _pg=psycopg2.connect(DB_URL.replace("postgres://","postgresql://",1), sslmode="require", connect_timeout=10); _pg.autocommit=True
-        with _pg.cursor() as c:
-            c.execute("CREATE TABLE IF NOT EXISTS shop (id INT PRIMARY KEY, data JSONB NOT NULL)")
-            c.execute("INSERT INTO shop (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING")
-    return _pg
+BASE=os.path.dirname(os.path.abspath(__file__)); PUBLIC=os.path.join(BASE,"public"); DATA_FILE=os.path.join(BASE,"data.json"); LOCK=threading.Lock(); PRESENCE={}; _MEM=None  # v12: Render IS the database - in-memory store
 def _normalize(d):
     if not isinstance(d,dict): d={}
     for k,v in [("products",[]),("settings",{}),("ads",{}),("banners",[]),("categories",[]),("locations",[]),("chats",[]),("users",[]),("payments",[]),("broadcasts",[]),("reviews",[]),("pendingPayments",[])]: d.setdefault(k,v)
@@ -290,17 +281,14 @@ def _get_shop():
         return d
 
 def load():
-    if DB_URL:
-        try:
-            with pg_conn().cursor() as c:
-                c.execute("SELECT data FROM shop WHERE id=1"); row=c.fetchone(); return _normalize(row[0] if row else {})
-        except Exception:
-            global _pg; _pg=None
-            with pg_conn().cursor() as c:
-                c.execute("SELECT data FROM shop WHERE id=1"); row=c.fetchone(); return _normalize(row[0] if row else {})
+    # v12: Render IS the database. Memory is the live store; data.json on Render disk is the backup.
+    global _MEM
+    if _MEM is not None:
+        return _normalize(_MEM)
     try:
-        with open(DATA_FILE) as f: return _normalize(json.load(f))
-    except Exception: return _normalize({})
+        with open(DATA_FILE) as f: _MEM = _normalize(json.load(f))
+    except Exception: _MEM = _normalize({})
+    return _MEM
 
 def _dedupe_notifs(ns):
     by_id = {}
@@ -324,21 +312,12 @@ def _dedupe_notifs(ns):
     return out
 
 def save(data):
+    # v12: Render IS the database. One write: memory (live) + data.json (backup on Render disk).
+    global _MEM
     data=_normalize(data)
     try: data["notifications"]=_dedupe_notifs(data.get("notifications") or [])
     except Exception: pass
-    if DB_URL:
-        try:
-            with pg_conn().cursor() as c: c.execute("INSERT INTO shop (id, data) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data", [json.dumps(data)])
-            return
-        except Exception:
-            global _pg; _pg=None
-            try:
-                with pg_conn().cursor() as c: c.execute("INSERT INTO shop (id, data) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data", [json.dumps(data)])
-                return
-            except Exception:
-                pass
-    # Postgres unreachable: keep a local copy so nothing is lost, and retry Postgres next save
+    _MEM = data
     try:
         tmp=DATA_FILE+".tmp"
         with open(tmp,"w") as f: json.dump(data,f)
@@ -403,7 +382,7 @@ class H(SimpleHTTPRequestHandler):
                     return self._send(200, {"status": rec.get("status"), "referenceId": rec.get("referenceId"), "productId": rec.get("productId")})
             except Exception as e: return self._send(500, {"status": "error", "error": str(e)[:200]})
         if u in ("/api/health","/health"):
-            try: d=load(); return self._send(200, {"ok":True,"storage":"postgres" if DB_URL else "local-file","products":len(d.get("products") or [])})
+            try: d=load(); return self._send(200, {"ok":True,"storage":"render-disk","products":len(d.get("products") or [])})
             except Exception as e: return self._send(500, {"ok":False,"error":str(e)[:200]})
         if u=="/": u="/index.html"
         fp=None
@@ -546,7 +525,7 @@ class H(SimpleHTTPRequestHandler):
             save(merged)
         return self._send(200,{"ok":True,"products":len(merged.get("products") or [])})
 if __name__=="__main__":
-    port=int(os.environ.get("PORT","10000")); print("Storage:", "Postgres" if DB_URL else "local data.json", flush=True)
+    port=int(os.environ.get("PORT","10000")); print("Storage: Render disk + memory (data.json)", flush=True)
     try:
         threading.Thread(target=_pay_poller, daemon=True).start()
     except Exception: pass
