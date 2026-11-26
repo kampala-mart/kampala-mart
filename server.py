@@ -1,7 +1,7 @@
 import json, os, mimetypes, threading, time, base64, uuid, urllib.request, urllib.error
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse
-BASE=os.path.dirname(os.path.abspath(__file__)); PUBLIC=os.path.join(BASE,"public"); DATA_FILE=os.path.join(BASE,"data.json"); LOCK=threading.Lock(); PRESENCE={}; VERSION=[0]; SSE_CLIENTS=[]; SSE_LOCK=threading.Lock(); DB_URL=os.environ.get("DATABASE_URL",""); _pg=None
+BASE=os.path.dirname(os.path.abspath(__file__)); PUBLIC=os.path.join(BASE,"public"); DATA_FILE=os.path.join(BASE,"data.json"); LOCK=threading.Lock(); PRESENCE={}; DB_URL=os.environ.get("DATABASE_URL",""); _pg=None
 def pg_conn():
     global _pg
     if _pg is None:
@@ -11,25 +11,6 @@ def pg_conn():
             c.execute("CREATE TABLE IF NOT EXISTS shop (id INT PRIMARY KEY, data JSONB NOT NULL)")
             c.execute("INSERT INTO shop (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING")
     return _pg
-def _bump():
-    VERSION[0]+=1
-    payload=('data: '+json.dumps({'type':'shop','version':VERSION[0],'at':time.time()})+'\n\n').encode()
-    with SSE_LOCK:
-        dead=[]
-        for q in list(SSE_CLIENTS):
-            try: q.put(payload)
-            except Exception: dead.append(q)
-        for q in dead:
-            try: SSE_CLIENTS.remove(q)
-            except Exception: pass
-def _dedupe_notifs_list(ns):
-    seen={}; out=[]
-    for n in (ns or []):
-        if not isinstance(n,dict): continue
-        k=n.get('id') or (str(n.get('title'))+'|'+str(n.get('productId'))+'|'+str(n.get('userId')))
-        if k in seen: continue
-        seen[k]=True; out.append(n)
-    return out
 def _normalize(d):
     if not isinstance(d,dict): d={}
     for k,v in [("products",[]),("settings",{}),("ads",{}),("banners",[]),("categories",[]),("locations",[]),("chats",[]),("users",[]),("payments",[]),("broadcasts",[]),("reviews",[]),("pendingPayments",[])]: d.setdefault(k,v)
@@ -99,7 +80,6 @@ def _merge_shop(cur, data, deleted):
     for f in list_fields:
         if isinstance(data.get(f), list):
             merged[f] = _merge_list(cur.get(f) or [], data[f], deleted)
-    if isinstance(merged.get("notifications"), list): merged["notifications"]=_dedupe_notifs_list(merged["notifications"])
     for f in ["settings", "ads", "saved"]:
         if isinstance(data.get(f), dict):
             base = dict(cur.get(f) or {}); base.update(data[f]); merged[f] = base
@@ -283,7 +263,7 @@ def _pay_poller():
                     elif st == "FAILED":
                         rec["status"] = "failed"; changed = True
                 if changed:
-                    try: save(d); _bump()
+                    try: save(d)
                     except Exception: pass
         except Exception:
             pass
@@ -292,7 +272,7 @@ def _get_shop():
     with LOCK:
         d = load()
         if _enrich(d):
-            try: save(d); _bump()
+            try: save(d)
             except Exception: pass
         # OneSignal REST key NEVER leaves the server - strip it from every response
         try:
@@ -345,10 +325,6 @@ def _dedupe_notifs(ns):
 
 def save(data):
     data=_normalize(data)
-    # V11: server is truth - dedupe notifications by id so they never repeat
-    try:
-        if isinstance(data.get("notifications"), list): data["notifications"]=_dedupe_notifs_list(data["notifications"])
-    except Exception: pass
     try: data["notifications"]=_dedupe_notifs(data.get("notifications") or [])
     except Exception: pass
     if DB_URL:
@@ -387,7 +363,7 @@ class H(SimpleHTTPRequestHandler):
                 if settings.get("bankApiUrl"): res["bank"] = {"ok": True, "note": "Bank API URL saved - it is tested when a bank payment starts"}
                 ok = any(v.get("ok") for v in res.values())
                 with LOCK:
-                    d = load(); d.setdefault("settings", {})["apiVerified"] = bool(ok); save(d); _bump()
+                    d = load(); d.setdefault("settings", {})["apiVerified"] = bool(ok); save(d)
                 return self._send(200, {"ok": ok, "providers": res, "apiVerified": bool(ok)})
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
 
@@ -396,53 +372,6 @@ class H(SimpleHTTPRequestHandler):
                 with LOCK: _d = load(); _st = _d.get("settings") or {}
                 return self._send(200, {"ok": True, "hasRestKey": bool(_st.get("onesignalRestKey")), "appId": _st.get("onesignalAppId") or _st.get("oneSignalAppId") or ""})
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
-        if u=="/api/audit":
-            try:
-                with LOCK: d=load(); st=d.get("settings") or {}
-                fee=str(st.get("feeMode") or st.get("listingFee") or st.get("fee") or "").lower()
-                paymode=str(st.get("paymentMode") or st.get("mode") or st.get("payMode") or st.get("listingMode") or "").lower()
-                ads=d.get("ads") or st.get("ads") or {}
-                if isinstance(ads,str): ads={}
-                checks={"free_theory":{"feeMode":fee or "not-set (defaults FREE)","paymentMode":paymode or "not-set","note":"FREE = upload goes live / to approval without fee. PAID = seller must pay listing fee first."},"api_payments":{"apiVerified":bool(st.get("apiVerified")),"hasMtnKeys":bool(st.get("mtnSubscriptionKey") and st.get("mtnApiUser") and st.get("mtnApiKey")),"hasAirtelKeys":bool(st.get("airtelClientId") and st.get("airtelClientSecret")),"hasBank":bool(st.get("bankApiUrl")),"note":"If apiVerified false, Automatic mode blocks payments - owner must Test API Connection."},"onesignal":{"appIdSet":bool(st.get("onesignalAppId") or st.get("oneSignalAppId")),"restKeySet":bool(st.get("onesignalRestKey")),"note":"App ID on device + REST key on SERVER ONLY (never sent to browser)."},"google_ads":{"adsEnabled":bool(ads.get("adsEnabled")),"adsenseId":bool(ads.get("adsenseId")),"note":"Ads are server settings. If disabled or no AdSense ID, no ads show - correct, not an error."},"server_sync":{"version":VERSION[0],"products":len(d.get("products") or []),"chats":len(d.get("chats") or []),"notifications":len(d.get("notifications") or [])}}
-                return self._send(200, {"ok":True,"checks":checks})
-            except Exception as e: return self._send(500, {"error":str(e)[:200]})
-        if u=="/api/version":
-            try: return self._send(200, {"ok":True,"version":VERSION[0]})
-            except Exception as e: return self._send(500, {"error":str(e)[:200]})
-        if u=="/api/unread":
-            try:
-                from urllib.parse import parse_qs
-                q=parse_qs(urlparse(self.path).query); uid=(q.get("userId") or [""])[0]
-                with LOCK: d=load()
-                prods=d.get("products") or []
-                pending=[p for p in prods if str(p.get("status") or "").lower() in ("pending","pending_verification","draft","under_review","under review")]
-                chats=d.get("chats") or []
-                unread_msgs=0
-                for c in chats:
-                    for m in (c.get("messages") or []):
-                        if m.get("read") is not True and str(m.get("toId") or m.get("to") or "")==uid: unread_msgs+=1
-                notifs=d.get("notifications") or []
-                unread_notifs=[n for n in notifs if not n.get("read") and (not n.get("userId") or n.get("userId")==uid or n.get("forOwner") and uid=="owner")]
-                return self._send(200, {"ok":True,"version":VERSION[0],"unread":{"messages":unread_msgs,"notifications":len(unread_notifs),"approvals":len(pending)}})
-            except Exception as e: return self._send(500, {"error":str(e)[:200]})
-        if u=="/api/events":
-            # SSE: server pushes version on every save -> clients sync in <1s
-            try:
-                import queue
-                q=queue.Queue()
-                with SSE_LOCK: SSE_CLIENTS.append(q)
-                self.send_response(200); self.send_header("Content-Type","text/event-stream"); self.send_header("Cache-Control","no-cache"); self.send_header("Connection","keep-alive"); self.end_headers()
-                self.wfile.write(('data: '+json.dumps({"type":"hello","version":VERSION[0]})+'\n\n').encode())
-                while True:
-                    try: payload=q.get(timeout=15)
-                    except Exception: payload=('data: '+json.dumps({"type":"ping","version":VERSION[0]})+'\n\n').encode()
-                    try: self.wfile.write(payload); self.wfile.flush()
-                    except Exception: break
-                with SSE_LOCK:
-                    try: SSE_CLIENTS.remove(q)
-                    except Exception: pass
-                return
-            except Exception: return
         if u in ("/api/shop","/api/shop/"):
             try: return self._send(200, _get_shop())
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
@@ -468,9 +397,9 @@ class H(SimpleHTTPRequestHandler):
                     if rec.get("status") == "pending":
                         st, _e = _provider_status(d.get("settings") or {}, rec)
                         if st == "SUCCESSFUL":
-                            rec["status"] = "successful"; _flip_product_live(d, rec.get("productId"), "Payment verified automatically - your product is now live! No owner approval needed."); save(d); _bump()
+                            rec["status"] = "successful"; _flip_product_live(d, rec.get("productId"), "Payment verified automatically - your product is now live! No owner approval needed."); save(d)
                         elif st == "FAILED":
-                            rec["status"] = "failed"; save(d); _bump()
+                            rec["status"] = "failed"; save(d)
                     return self._send(200, {"status": rec.get("status"), "referenceId": rec.get("referenceId"), "productId": rec.get("productId")})
             except Exception as e: return self._send(500, {"status": "error", "error": str(e)[:200]})
         if u in ("/api/health","/health"):
@@ -489,30 +418,6 @@ class H(SimpleHTTPRequestHandler):
     def do_POST(self): self._write()
     def _write(self):
         u=urlparse(self.path).path
-        if u=="/api/patch":
-            # Atomic single-field patch - no whole-shop race, no lost approvals/messages/settings
-            try:
-                n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
-                body=json.loads(raw or b"{}")
-            except Exception: return self._send(400, {"error":"invalid json"})
-            with LOCK:
-                d=load()
-                try:
-                    kind=body.get("kind"); item=body.get("item") or {}
-                    if kind=="settings" and isinstance(item, dict):
-                        base=dict(d.get("settings") or {}); base.update(item); d["settings"]=base
-                    elif kind in ("products","chats","notifications","boosts","payments","users","broadcasts","banners","categories","locations","reviews","pendingPayments","submissions","support") and isinstance(item, dict):
-                        lst=list(d.get(kind) or []); k=item.get("id") or item.get("name") or item.get("title")
-                        found=False
-                        for i,ex in enumerate(lst):
-                            if isinstance(ex,dict) and (ex.get("id")==k or ex.get("name")==k):
-                                lst[i]=item; found=True; break
-                        if not found: lst.insert(0,item)
-                        d[kind]=lst
-                    else: return self._send(400, {"error":"kind/item required"})
-                    save(d); _bump()
-                except Exception as e: return self._send(500, {"error":str(e)[:200]})
-                return self._send(200, {"ok":True,"version":VERSION[0]})
         if u=="/api/presence":
             try:
                 n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
@@ -544,7 +449,7 @@ class H(SimpleHTTPRequestHandler):
                         msgs = c.get("messages") or []
                         if msgs:
                             c.setdefault("lastReadBy", {})[uid] = msgs[-1].get("id") or msgs[-1].get("text") or ""
-                save(d); _bump()
+                save(d)
             return self._send(200, {"ok": True})
         if u == "/api/pay/initiate":
             try:
@@ -574,7 +479,7 @@ class H(SimpleHTTPRequestHandler):
                 else: ref, err = _mtn_pay(settings, phone, amount, data.get("productId"))
                 if err: return self._send(400, {"ok": False, "error": err})
                 rec = {"id": ref, "referenceId": ref, "productId": data.get("productId"), "sellerId": (prod or {}).get("sellerId") or data.get("sellerId") or "", "phone": phone, "network": net, "amount": amount, "status": "pending", "createdAt": _now_iso()}
-                d.setdefault("pendingPayments", []).append(rec); save(d); _bump()
+                d.setdefault("pendingPayments", []).append(rec); save(d)
                 return self._send(200, {"ok": True, "referenceId": ref, "message": "Check your phone - approve the payment prompt with your PIN."})
         if u == "/api/onesignal/key":
             try:
