@@ -7185,25 +7185,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
   function injectOwnerTools(){
     try{
       if(!isOwnerOpen()) return;
-      if(!document.getElementById('km-v8-broadcast-box')){
-        var heads=[].slice.call(document.querySelectorAll('h1,h2,h3,h4'));
-        var anchor=heads.find(function(h){ return /notifications/i.test(h.textContent); })||heads[0];
-        if(anchor){
-          var box=el('<div id="km-v8-broadcast-box" style="margin:12px 0;padding:14px;border:2px solid #111;border-radius:14px;background:#fff"><div style="font-weight:800;font-size:16px;margin-bottom:6px">Send notification to ALL users (phone + web)</div><div style="font-size:13px;color:#555;margin-bottom:8px">Everyone sees this in the app instantly, even without refresh.</div><textarea id="km-v8-broadcast-text" rows="2" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:10px;font-size:15px" placeholder="e.g. New phones just arrived! Open Kampala Mart now."></textarea><button id="km-v8-broadcast-send" style="margin-top:8px;width:100%;background:#111;color:#fff;border:0;border-radius:10px;padding:12px;font-weight:800;font-size:15px">Send to everyone</button><div id="km-v8-broadcast-status" style="font-size:13px;margin-top:6px;color:#0a7"></div></div>');
-          anchor.parentNode.insertBefore(box, anchor.nextSibling);
-          box.querySelector('#km-v8-broadcast-send').onclick=function(){
-            var txt=box.querySelector('#km-v8-broadcast-text').value.trim();
-            if(!txt){ box.querySelector('#km-v8-broadcast-status').textContent='Type a message first.'; return; }
-            fetch('/api/shop').then(function(r){ return r.json(); }).then(function(cloud){
-              var arr=Array.isArray(cloud.broadcasts)?cloud.broadcasts:[];
-              arr.push({id:'b-'+Date.now(), text:txt, at:new Date().toISOString()});
-              cloud.broadcasts=arr.slice(-20);
-              return fetch('/api/shop',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(cloud)});
-            }).then(function(){ box.querySelector('#km-v8-broadcast-status').textContent='Sent! Every user will see it.'; box.querySelector('#km-v8-broadcast-text').value=''; })
-            .catch(function(){ box.querySelector('#km-v8-broadcast-status').textContent='Could not send. Try again.'; });
-          };
-        }
-      }
+      
       if(!document.getElementById('km-v8-undo-btn')){
         var saveBtns=[].slice.call(document.querySelectorAll('button')).filter(function(b){ return /save/i.test(b.textContent); });
         if(saveBtns.length){
@@ -7403,7 +7385,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
     }catch(e){}
     try{
       var bc=JSON.stringify(cloud.broadcasts||[]);
-      if(bc!==LAST.broadcasts){ LAST.broadcasts=bc; showBroadcast((cloud.broadcasts||[]).slice(-1)[0]); }
+ }
     }catch(e){}
     if(!opts || !opts.skipChats) applyChats(cloud);
   }
@@ -7491,19 +7473,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
     }catch(e){}
   }
   // ---------- BROADCAST BANNER: short box, logo + Kampala Mart ----------
-  function showBroadcast(bc){
-    try{
-      if(!bc) return;
-      if(localStorage.getItem("km_bc_dismissed")===String(bc.id)) return;
-      if(q("#km-v95-bc")) return;
-      var box=document.createElement("div"); box.id="km-v95-bc";
-      box.style.cssText="position:fixed;top:70px;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:420px;z-index:99996;background:#fff;color:#111;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.3);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;";
-      box.innerHTML='<img src="/icon-192.png" onerror="this.style.display=\'none\'" style="width:36px;height:36px;border-radius:8px;flex:0 0 auto;" alt=""><div style="flex:1;min-width:0;"><b style="font-size:13px;">Kampala Mart</b><div style="font-size:13px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">'+esc(bc.title?bc.title+" — "+(bc.message||""):bc.message||"")+'</div></div><button type="button" style="border:0;background:none;font-size:16px;cursor:pointer;color:#64748b;">✕</button>';
-      box.querySelector("button").onclick=function(){ try{ localStorage.setItem("km_bc_dismissed", String(bc.id)); }catch(e){} box.remove(); };
-      document.body.appendChild(box);
-      setTimeout(function(){ try{ box.remove(); }catch(e){} }, 12000);
-    }catch(e){}
-  }
+  
   // ---------- GOOGLE ADS: render real ad units ----------
   function removeAds(){
     try{ qa(".km-v95-ad").forEach(function(el){ el.remove(); }); qa('script[data-km-adsense]').forEach(function(el){ el.remove(); }); }catch(e){}
@@ -8118,16 +8088,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
     }
   }catch(e){}
   // --- 5. Automatic-mode banner inside the Pay modal ---
-  setInterval(function(){ try{
-    if((window.__kmPaymentMode||'').toLowerCase() !== 'auto' && (window.__kmPaymentMode||'').toLowerCase() !== 'automatic') return;
-    document.querySelectorAll('h2,h3').forEach(function(h){ if((h.textContent||'').indexOf('Pay Listing Fee')!==-1){
-      var box = h.closest('div'); if(box && !box.querySelector('[data-km-auto-banner]')){
-        var d=document.createElement('div'); d.setAttribute('data-km-auto-banner','1');
-        d.style.cssText='background:#DCFCE7;border:1px solid #86EFAC;color:#14532D;border-radius:10px;padding:10px 12px;font-weight:800;font-size:14px;margin:8px 0';
-        d.textContent='Pay with MTN MoMo Pay - approve the prompt on your phone. Your product goes live automatically.';
-        h.parentNode.insertBefore(d, h.nextSibling);
-      } } });
-  }catch(e){} }, 1000);
+  
   // --- 6. Profile photo: make the My Profile photo input actually save to the server + show preview + show avatar ---
   function bindPhoto(){ try{
     document.querySelectorAll('input[type="file"]').forEach(function(inp){
@@ -8193,33 +8154,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
         var ct=r.headers.get('content-type')||''; if(ct.indexOf('json')!==-1){ return r.clone().json().then(function(d){ SNAP=d; return new Response(JSON.stringify(d),{status:r.status,headers:{'Content-Type':'application/json'}}); }).catch(function(){ return r; }); } } }catch(e){}
       return r; }); }; }catch(e){}
   // --- Owner Panel: Automatic Payment API keys ---
-  function apiPanel(){ try{
-    var shell=document.querySelector('.admin-shell'); if(!shell || document.getElementById('km-api-panel')) return;
-    if(!isOwner()) return;
-    var d=document.createElement('div'); d.id='km-api-panel'; d.className='panel';
-    d.style.cssText='border:2px solid #5AB8FF;background:#F0F9FF;border-radius:14px;padding:14px;margin-top:12px';
-    d.innerHTML='<h3>Automatic Payment API - MTN MoMo + Airtel</h3>'+
-      '<p style="font-size:13px;color:#475569;line-height:1.5">Paste your API keys here ONCE. Then in Automatic mode the buyer gets a payment prompt on their phone, and the API verifies the money - no Transaction ID, no manual approval.<br>'+
-      'MTN: MoMo Developer portal > Collections > Subscription Key + API User + API Key. Airtel: Open API portal > Client ID + Client Secret.</p>'+
-      '<label>MTN Subscription Key <input id="km-ap-mtn-sub" type="text" placeholder="Paste MTN Subscription Key"></label>'+
-      '<label>MTN API User <input id="km-ap-mtn-user" type="text" placeholder="Paste MTN API User (UUID)"></label>'+
-      '<label>MTN API Key <input id="km-ap-mtn-key" type="text" placeholder="Paste MTN API Key"></label>'+
-      '<label>MTN Environment <select id="km-ap-mtn-env"><option value="sandbox">sandbox (test)</option><option value="mtnuganda">mtnuganda (LIVE money)</option></select></label>'+
-      '<label>Airtel Client ID <input id="km-ap-air-id" type="text" placeholder="Paste Airtel Client ID"></label>'+
-      '<label>Airtel Client Secret <input id="km-ap-air-sec" type="text" placeholder="Paste Airtel Client Secret"></label><label>Bank API URL (for later - when you get the bank API) <input id="km-ap-bank-url" type="text" placeholder="Paste Bank API URL"></label><label>Bank API Key <input id="km-ap-bank-key" type="text" placeholder="Paste Bank API Key"></label>'+
-      '<button id="km-ap-save" type="button" class="submit" style="margin-top:10px">Save API Keys to Server</button>'+
-      '<div id="km-ap-status" style="font-size:13px;font-weight:700;margin-top:8px"></div>';
-    shell.appendChild(d);
-    function fill(){ try{ var st=(SNAP&&SNAP.settings)||{}; var g=function(id,v){ var el=document.getElementById(id); if(el && !el.dataset.kmV){ el.value=v||''; } };
-      g('km-ap-mtn-sub',st.mtnSubscriptionKey); g('km-ap-mtn-user',st.mtnApiUser); g('km-ap-mtn-key',st.mtnApiKey); g('km-ap-air-id',st.airtelClientId); g('km-ap-air-sec',st.airtelClientSecret); g('km-ap-bank-url',st.bankApiUrl); g('km-ap-bank-key',st.bankApiKey);
-      var env=document.getElementById('km-ap-mtn-env'); if(env) env.value=st.mtnEnvironment||'sandbox'; }catch(e){} }
-    fill(); setTimeout(fill,1500);
-    document.getElementById('km-ap-save').onclick=function(){ var st2=document.getElementById('km-ap-status');
-      var body={ mtnSubscriptionKey:document.getElementById('km-ap-mtn-sub').value.trim(), mtnApiUser:document.getElementById('km-ap-mtn-user').value.trim(), mtnApiKey:document.getElementById('km-ap-mtn-key').value.trim(), mtnEnvironment:document.getElementById('km-ap-mtn-env').value, airtelClientId:document.getElementById('km-ap-air-id').value.trim(), airtelClientSecret:document.getElementById('km-ap-air-sec').value.trim(), bankApiUrl:document.getElementById('km-ap-bank-url').value.trim(), bankApiKey:document.getElementById('km-ap-bank-key').value.trim() };
-      st2.textContent='Saving...';
-      fetch('/api/shop').then(function(r){ return r.json(); }).then(function(shop){ var s2=Object.assign({}, shop.settings||{}, body);
-        return fetch('/api/shop',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({settings:s2})}); }).then(function(){ st2.textContent='API keys saved to server - Automatic payments are now ON for every browser.'; }).catch(function(){ st2.textContent='Save failed - check connection and try again.'; }); };
-  }catch(e){} }
+  
   setInterval(apiPanel, 2000);
   // --- Auto pay panel inside the Pay modal ---
   function setNative(inp,val){ try{ var proto=window.HTMLInputElement.prototype; var desc=Object.getOwnPropertyDescriptor(proto,'value'); if(desc&&desc.set) desc.set.call(inp,val); else inp.value=val; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){ try{ inp.value=val; }catch(e2){} } }
@@ -8364,7 +8299,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
         shell.appendChild(fb);
         var s2=settings(); document.getElementById("km-fb-mode").value=String(s2.paymentMode||s2.mode||"free").toLowerCase().indexOf("paid")>=0?"paid":"free";
         document.getElementById("km-fb-paytype").value=modeAuto()?"automatic":"manual";
-        document.getElementById("km-fb-status").textContent = creds()? (s2.apiVerified? "API connected and tested. Automatic uploads unblocked." : "API keys saved but not tested yet - press Test API Connection.") : "No API keys yet. Add them in the API panel below, then Test.";
+        document.getElementById("km-fb-status").textContent = creds()? (s2.apiVerified? "API connected and tested. Automatic uploads unblocked." : "API keys saved but not tested yet - press Test API Connection.") : "No API keys yet. Add them in the Automatic API tab of the Owner Panel, then Test.";
         document.getElementById("km-fb-save").onclick=function(){ fetch("/api/shop").then(function(r){return r.json();}).then(function(cur){ var ns=cur.settings||{}; var mv=document.getElementById("km-fb-mode").value; var pv=document.getElementById("km-fb-paytype").value; ns.paymentMode=mv; ns.mode=mv; ns.payMode=pv; ns.listingMode=mv; cur.settings=ns; return fetch("/api/shop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cur)}); }).then(function(){ document.getElementById("km-fb-status").textContent="Saved to server."; }).catch(function(){ document.getElementById("km-fb-status").textContent="Could not save - check connection."; }); };
         document.getElementById("km-fb-test").onclick=function(){ var st2=document.getElementById("km-fb-status"); st2.textContent="Testing the real API... please wait."; fetch("/api/pay/test").then(function(r){return r.json();}).then(function(j){ st2.textContent = j.apiVerified? "API works. Automatic uploads are now unblocked." : "API not working yet: "+JSON.stringify(j.providers||{}).slice(0,300); }); };
       }
@@ -8627,7 +8562,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
       };
       return;
     }
-    if(TAB==="notifications"){
+    if(TAB==="notifications"){ km11MarkRead();
       var subs=CUR.submissions||[];
       h='<h3>Notifications ('+subs.length+')</h3><p>Every product submitted for review appears here with the fee, payer number and status.</p>';
       subs.forEach(function(e,i){
@@ -8812,6 +8747,7 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
   function openPanel(){
     try{
       var old=document.getElementById("km11-panel"); if(old){ old.scrollIntoView(); return; }
+      var fb0=document.getElementById("km-owner-fallback"); if(fb0) fb0.remove();
       var shell=document.querySelector(".admin-shell");
       var box=document.createElement("div"); box.id="km11-panel";
       box.style.cssText="background:#fff;border:2px solid #38BDF8;border-radius:14px;padding:18px;margin:12px;max-width:980px";
@@ -8820,24 +8756,95 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
       apiGet().then(function(c){ CUR=c; renderTab(); }).catch(function(){ st("Could not load shop from server - check internet."); });
     }catch(e){}
   }
-  setInterval(function(){
+    function km11MarkRead(){
     try{
-      if(isOwner() && !document.getElementById("km-owner-float")){
-        var b=document.createElement("button"); b.id="km-owner-float"; b.type="button"; b.textContent="Owner Panel";
-        b.style.cssText="position:fixed;left:12px;bottom:76px;z-index:99990;background:#0284C7;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)";
-        b.onclick=function(){
-          var sh=document.querySelector(".admin-shell");
-          if(sh && (sh.innerText||"").replace(/\s+/g," ").trim().length>=80 && !document.getElementById("km11-panel")){ sh.scrollIntoView(); return; }
-          openPanel();
-        };
-        document.body.appendChild(b);
-      }
+      var s={}; ["km_session_user","km_session","km_user"].forEach(function(k){ try{ var v=JSON.parse(localStorage.getItem(k)||"null"); if(v) s=Object.assign(s,v); }catch(e){} });
+      var uid=String(s.id||s.phone||"");
+      fetch("/api/read",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid,type:"notifications",isOwner:isOwner()})}).catch(function(){});
+      fetch("/api/read",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid,type:"chats"})}).catch(function(){});
+      fetch("/api/shop").then(function(r){return r.json();}).then(function(c){
+        var changed=false;
+        (c.submissions||[]).forEach(function(x){ if(!x.read){ x.read=true; changed=true; } });
+        if(changed) return fetch("/api/shop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(c)});
+      }).catch(function(){});
+    }catch(e){}
+  }
+  document.addEventListener("click", function(e){
+    try{
+      var t=e.target;
+      document.querySelectorAll("#km-v8-broadcast-box, #km-api-panel, [data-km-auto-banner]").forEach(function(el){ el.remove(); });
+      if(t.closest && t.closest("header")) km11MarkRead();
+    }catch(err){}
+  }, true);
+setInterval(function(){
+    try{
+      
       var ownerPage=/owner/i.test(document.title||"")||/owner|admin/i.test(location.hash+location.pathname);
       var shell=document.querySelector(".admin-shell");
-      var shellEmpty=shell && (shell.innerText||"").replace(/\s+/g," ").trim().length<80;
+      var shellEmpty=shell && (((shell.innerText||"").replace(/\s+/g," ").trim().length<80) || !!shell.querySelector("#km-owner-fallback"));
       if(isOwner() && ownerPage && (!shell||shellEmpty) && !document.getElementById("km11-panel")){ openPanel(); }
     }catch(e){}
   },1000);
+})();
+</script>
+
+<script id="km-v11-notif-fix">
+(function(){
+  var st=document.createElement("style");
+  st.textContent="#km-push-btn{bottom:74px !important; left:12px !important;} #km-push-panel{z-index:100001 !important;}";
+  document.head.appendChild(st);
+  setInterval(function(){
+    try{
+      if(localStorage.getItem("km_push_decided")==="1"){
+        var b=document.getElementById("km-push-btn"); if(b) b.classList.remove("km-show");
+      }
+    }catch(e){}
+  }, 1000);
+  function kmAllow(){
+    var status=document.getElementById("km-push-status");
+    if(status) status.textContent="Waiting for the browser popup... tap Allow there.";
+    var done=false;
+    function finish(msg){
+      if(done) return; done=true;
+      if(status) status.textContent=msg;
+      try{ localStorage.setItem("km_push_decided","1"); }catch(e){}
+      setTimeout(function(){
+        var p=document.getElementById("km-push-panel"); if(p) p.classList.remove("km-open");
+        var b=document.getElementById("km-push-btn"); if(b) b.classList.remove("km-show");
+      }, 4000);
+    }
+    try{
+      var pr=null;
+      try{ pr=Notification.requestPermission(); }catch(e){}
+      if(pr && pr.then){
+        pr.then(function(res){
+          if(res==="granted"){ finish("Notifications ON - you will get popups even when the site is closed."); }
+          else { finish("You tapped Block. Tap the lock in the address bar > Site settings > Notifications > Allow, reload, tap Allow again."); }
+        });
+      } else if(pr==="granted"){ finish("Notifications ON - you will get popups even when the site is closed."); }
+      else { finish("Popup did not appear. Turn off ad-blocker, reload, tap Allow again."); }
+    }catch(e){ finish("Popup did not appear. Turn off ad-blocker, reload, tap Allow again."); }
+    try{
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal){ try{ await OneSignal.User.PushSubscription.optIn(); }catch(e){} });
+    }catch(e){}
+    setTimeout(function(){ if(!done) finish("If the popup did not appear, tap the lock in the address bar > Notifications > Allow."); }, 10000);
+  }
+  document.addEventListener("click", function(e){
+    try{
+      var t=e.target;
+      if(t && t.closest && t.closest(".km-allow")){
+        e.stopPropagation();
+        e.preventDefault();
+        kmAllow();
+      }
+      if(t && t.closest && t.closest(".km-later")){
+        try{ localStorage.setItem("km_push_decided","1"); }catch(err){}
+        var p=document.getElementById("km-push-panel"); if(p) p.classList.remove("km-open");
+        var b=document.getElementById("km-push-btn"); if(b) b.classList.remove("km-show");
+      }
+    }catch(err){}
+  }, true);
 })();
 </script>
 </body>
