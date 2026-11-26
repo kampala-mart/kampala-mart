@@ -266,12 +266,14 @@ def _get_shop():
             st = d.get("settings") or {}
             if "onesignalRestKey" in st:
                 d = dict(d); st = dict(st); del st["onesignalRestKey"]; d["settings"] = st
-        except Exception: pass
-        # Delete tombstones are internal only
+        except Exception:
+            pass
+        # Tell every browser which ids are deleted so stale copies never come back
         try:
             if "_deletedIds" in d:
-                d = dict(d); del d["_deletedIds"]
-        except Exception: pass
+                d = dict(d); d["deletedIds"] = sorted(d.get("_deletedIds") or []); del d["_deletedIds"]
+        except Exception:
+            pass
         return d
 
 def load():
