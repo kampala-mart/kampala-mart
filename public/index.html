@@ -8064,6 +8064,255 @@ body.km-not-home #km-search-icon{display:inline-flex !important; align-items:cen
 })();
 </script>
 
+
+<script id="km-v102-fix">
+(function(){
+  var OWNER_PHONE='0732172222';
+  function sess(){ try{ return JSON.parse(localStorage.getItem('km_session_user')||'null'); }catch(e){ return null; } }
+  function isOwner(){ var s=sess(); return !!(s && (s.phone===OWNER_PHONE || s.role==='owner' || s.isOwner)); }
+  // --- 1. Owner buttons + owner panel hidden after logout (they only reappear for the owner) ---
+  setInterval(function(){ try{
+    var tools=document.getElementById('km-owner-tools'); if(tools) tools.style.display = isOwner() ? '' : 'none';
+    var shell=document.querySelector('.admin-shell'); if(shell) shell.style.display = isOwner() ? '' : 'none';
+    document.querySelectorAll('button').forEach(function(b){ var t=(b.textContent||'').trim();
+      if((t==='Save to Cloud' || t.indexOf('Save This Shop to Cloud')===0 || t==='Empty Shop' || t==='Sync from Server') && !isOwner()) b.style.display='none'; });
+  }catch(e){} }, 800);
+  // --- 2. Voice / recording removed: button hidden, old voice notes shown as text-only note ---
+  var st=document.createElement('style'); st.textContent='#km-voice-btn{display:none!important}.chat-msg audio{display:none!important}';
+  document.head.appendChild(st);
+  setInterval(function(){ try{ document.querySelectorAll('.chat-msg audio').forEach(function(a){ if(!a.dataset.kmV102){ a.dataset.kmV102='1'; var s=document.createElement('span'); s.textContent='Voice message - text only now'; if(a.parentNode) a.parentNode.insertBefore(s,a); } }); }catch(e){} }, 1000);
+  // --- 3. "for this visit only" wording -> server wording ---
+  function fixTexts(){ try{ var w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); var n;
+    while(n=w.nextNode()){ var v=n.nodeValue||''; if(v.indexOf('for this visit only')!==-1 || v.indexOf('Saved for this visit only')!==-1 || v.indexOf('saved for this visit')!==-1){
+      n.nodeValue=v.replace(/Saved for this visit only/gi,'Saved to server - works on every browser').replace(/saved for this visit/gi,'saved to server').replace(/for this visit only/gi,'on every browser'); } }
+  }catch(e){} }
+  setInterval(fixTexts, 1500);
+  // --- 4. Fetch wrapper: pass tombstones on PUT; fix approval notifications to the owner's own id on GET; track payment mode ---
+  try{
+    var _fetch = window.fetch.bind(window);
+    window.fetch = function(url, opts){
+      var u = String((url && url.url) || url || '');
+      var isShop = u.indexOf('/api/shop') !== -1;
+      if(isShop && opts && opts.method && opts.method.toUpperCase() !== 'GET' && opts.body){
+        try{ var body = JSON.parse(opts.body); var del = [];
+          try{ (window.__kmTombstones || []).forEach(function(x){ del.push(x); }); }catch(e){}
+          if(del.length){ body.deletedIds = Array.from(new Set((body.deletedIds||[]).concat(del))); }
+          opts = Object.assign({}, opts, { body: JSON.stringify(body) });
+        }catch(e){}
+      }
+      return _fetch(url, opts).then(function(res){
+        if(!isShop) return res;
+        try{
+          var ct = res.headers.get('content-type') || '';
+          if(ct.indexOf('json') === -1) return res;
+          return res.clone().json().then(function(data){
+            try{ if(data && data.settings) window.__kmPaymentMode = data.settings.paymentMode || ''; }catch(e){}
+            // Owner approval notifications must be addressed to the logged-in owner id, or the panel filters them out
+            try{ var s = sess(); if(isOwner() && s && s.id && Array.isArray(data.notifications)){
+              data.notifications.forEach(function(n){ if(n && (n.forOwner || String(n.id||'').indexOf('syn-approval-')===0)) n.userId = s.id; });
+            } }catch(e){}
+            return new Response(JSON.stringify(data), { status: res.status, headers: { 'Content-Type': 'application/json' } });
+          }).catch(function(){ return res; });
+        }catch(e){ return res; }
+      });
+    }
+  }catch(e){}
+  // --- 5. Automatic-mode banner inside the Pay modal ---
+  setInterval(function(){ try{
+    if((window.__kmPaymentMode||'').toLowerCase() !== 'auto' && (window.__kmPaymentMode||'').toLowerCase() !== 'automatic') return;
+    document.querySelectorAll('h2,h3').forEach(function(h){ if((h.textContent||'').indexOf('Pay Listing Fee')!==-1){
+      var box = h.closest('div'); if(box && !box.querySelector('[data-km-auto-banner]')){
+        var d=document.createElement('div'); d.setAttribute('data-km-auto-banner','1');
+        d.style.cssText='background:#DCFCE7;border:1px solid #86EFAC;color:#14532D;border-radius:10px;padding:10px 12px;font-weight:800;font-size:14px;margin:8px 0';
+        d.textContent='Pay with MTN MoMo Pay - approve the prompt on your phone. Your product goes live automatically.';
+        h.parentNode.insertBefore(d, h.nextSibling);
+      } } });
+  }catch(e){} }, 1000);
+  // --- 6. Profile photo: make the My Profile photo input actually save to the server + show preview + show avatar ---
+  function bindPhoto(){ try{
+    document.querySelectorAll('input[type="file"]').forEach(function(inp){
+      if(inp.dataset.kmV102) return;
+      var lab = inp.closest('label'); var txt = lab ? (lab.textContent||'') : '';
+      if(txt.indexOf('Profile photo') === -1) return;
+      inp.dataset.kmV102 = '1';
+      var prev = document.createElement('img'); prev.style.cssText='width:72px;height:72px;border-radius:50%;object-fit:cover;display:none;margin:6px 0;border:2px solid #5AB8FF';
+      inp.parentNode.insertBefore(prev, inp);
+      var s0 = sess(); if(s0 && s0.avatar){ prev.src = s0.avatar; prev.style.display='block'; }
+      inp.addEventListener('change', function(){
+        var f = inp.files && inp.files[0]; if(!f) return;
+        var rd = new FileReader();
+        rd.onload = function(){
+          var img = new Image();
+          img.onload = function(){
+            var max = 240, sc = Math.min(1, max / Math.max(img.width, img.height));
+            var cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(img.width*sc)); cv.height = Math.max(1, Math.round(img.height*sc));
+            cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+            var dataUrl = cv.toDataURL('image/jpeg', 0.72);
+            prev.src = dataUrl; prev.style.display = 'block';
+            var s = sess(); if(!s) return;
+            s.avatar = dataUrl;
+            try{ localStorage.setItem('km_session_user', JSON.stringify(s)); }catch(e){}
+            _fetch('/api/shop').then(function(r){ return r.json(); }).then(function(shop){
+              var users = shop.users || []; var me = null;
+              users.forEach(function(u){ if(u && (u.id === s.id || u.phone === s.phone)) me = u; });
+              if(!me){ me = { id: s.id, phone: s.phone, name: s.name }; users.push(me); }
+              me.avatar = dataUrl;
+              return _fetch('/api/shop', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ users: users }) });
+            }).then(function(){ try{ if(window.__kmToast) window.__kmToast('Profile photo saved - everyone can see it now.'); }catch(e){} }).catch(function(){});
+          };
+          img.src = rd.result;
+        };
+        rd.readAsDataURL(f);
+      });
+    });
+  }catch(e){} }
+  setInterval(bindPhoto, 1000);
+  // --- 7. Show the logged-in user's photo in the header / profile dropdown ---
+  setInterval(function(){ try{
+    var s = sess(); if(!s || !s.avatar) return;
+    document.querySelectorAll('.profile-dropdown .pd-avatar, .user-chip .avatar').forEach(function(el){
+      if(el.dataset.kmAv === s.avatar) return; el.dataset.kmAv = s.avatar;
+      el.innerHTML = ''; var im = document.createElement('img');
+      im.src = s.avatar; im.style.cssText='width:100%;height:100%;border-radius:50%;object-fit:cover';
+      el.appendChild(im);
+    });
+  }catch(e){} }, 1000);
+})();
+</script>
+
+
+<script id="km-v103-fix">
+(function(){
+  var OWNER_PHONE='0732172222';
+  function sess(){ try{ return JSON.parse(localStorage.getItem('km_session_user')||'null'); }catch(e){ return null; } }
+  function isOwner(){ var s=sess(); return !!(s && (s.phone===OWNER_PHONE || s.role==='owner' || s.isOwner)); }
+  var SNAP=null;
+  try{ var _f=window.fetch.bind(window);
+    window.fetch=function(u,o){ return _f(u,o).then(function(r){
+      try{ var s=String((u&&u.url)||u||''); if(s.indexOf('/api/shop')!==-1 && (!o || !o.method || o.method.toUpperCase()==='GET')){
+        var ct=r.headers.get('content-type')||''; if(ct.indexOf('json')!==-1){ return r.clone().json().then(function(d){ SNAP=d; return new Response(JSON.stringify(d),{status:r.status,headers:{'Content-Type':'application/json'}}); }).catch(function(){ return r; }); } } }catch(e){}
+      return r; }); }; }catch(e){}
+  // --- Owner Panel: Automatic Payment API keys ---
+  function apiPanel(){ try{
+    var shell=document.querySelector('.admin-shell'); if(!shell || document.getElementById('km-api-panel')) return;
+    if(!isOwner()) return;
+    var d=document.createElement('div'); d.id='km-api-panel'; d.className='panel';
+    d.style.cssText='border:2px solid #5AB8FF;background:#F0F9FF;border-radius:14px;padding:14px;margin-top:12px';
+    d.innerHTML='<h3>Automatic Payment API - MTN MoMo + Airtel</h3>'+
+      '<p style="font-size:13px;color:#475569;line-height:1.5">Paste your API keys here ONCE. Then in Automatic mode the buyer gets a payment prompt on their phone, and the API verifies the money - no Transaction ID, no manual approval.<br>'+
+      'MTN: MoMo Developer portal > Collections > Subscription Key + API User + API Key. Airtel: Open API portal > Client ID + Client Secret.</p>'+
+      '<label>MTN Subscription Key <input id="km-ap-mtn-sub" type="text" placeholder="Paste MTN Subscription Key"></label>'+
+      '<label>MTN API User <input id="km-ap-mtn-user" type="text" placeholder="Paste MTN API User (UUID)"></label>'+
+      '<label>MTN API Key <input id="km-ap-mtn-key" type="text" placeholder="Paste MTN API Key"></label>'+
+      '<label>MTN Environment <select id="km-ap-mtn-env"><option value="sandbox">sandbox (test)</option><option value="mtnuganda">mtnuganda (LIVE money)</option></select></label>'+
+      '<label>Airtel Client ID <input id="km-ap-air-id" type="text" placeholder="Paste Airtel Client ID"></label>'+
+      '<label>Airtel Client Secret <input id="km-ap-air-sec" type="text" placeholder="Paste Airtel Client Secret"></label><label>Bank API URL (for later - when you get the bank API) <input id="km-ap-bank-url" type="text" placeholder="Paste Bank API URL"></label><label>Bank API Key <input id="km-ap-bank-key" type="text" placeholder="Paste Bank API Key"></label>'+
+      '<button id="km-ap-save" type="button" class="submit" style="margin-top:10px">Save API Keys to Server</button>'+
+      '<div id="km-ap-status" style="font-size:13px;font-weight:700;margin-top:8px"></div>';
+    shell.appendChild(d);
+    function fill(){ try{ var st=(SNAP&&SNAP.settings)||{}; var g=function(id,v){ var el=document.getElementById(id); if(el && !el.dataset.kmV){ el.value=v||''; } };
+      g('km-ap-mtn-sub',st.mtnSubscriptionKey); g('km-ap-mtn-user',st.mtnApiUser); g('km-ap-mtn-key',st.mtnApiKey); g('km-ap-air-id',st.airtelClientId); g('km-ap-air-sec',st.airtelClientSecret); g('km-ap-bank-url',st.bankApiUrl); g('km-ap-bank-key',st.bankApiKey);
+      var env=document.getElementById('km-ap-mtn-env'); if(env) env.value=st.mtnEnvironment||'sandbox'; }catch(e){} }
+    fill(); setTimeout(fill,1500);
+    document.getElementById('km-ap-save').onclick=function(){ var st2=document.getElementById('km-ap-status');
+      var body={ mtnSubscriptionKey:document.getElementById('km-ap-mtn-sub').value.trim(), mtnApiUser:document.getElementById('km-ap-mtn-user').value.trim(), mtnApiKey:document.getElementById('km-ap-mtn-key').value.trim(), mtnEnvironment:document.getElementById('km-ap-mtn-env').value, airtelClientId:document.getElementById('km-ap-air-id').value.trim(), airtelClientSecret:document.getElementById('km-ap-air-sec').value.trim(), bankApiUrl:document.getElementById('km-ap-bank-url').value.trim(), bankApiKey:document.getElementById('km-ap-bank-key').value.trim() };
+      st2.textContent='Saving...';
+      fetch('/api/shop').then(function(r){ return r.json(); }).then(function(shop){ var s2=Object.assign({}, shop.settings||{}, body);
+        return fetch('/api/shop',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({settings:s2})}); }).then(function(){ st2.textContent='API keys saved to server - Automatic payments are now ON for every browser.'; }).catch(function(){ st2.textContent='Save failed - check connection and try again.'; }); };
+  }catch(e){} }
+  setInterval(apiPanel, 2000);
+  // --- Auto pay panel inside the Pay modal ---
+  function setNative(inp,val){ try{ var proto=window.HTMLInputElement.prototype; var desc=Object.getOwnPropertyDescriptor(proto,'value'); if(desc&&desc.set) desc.set.call(inp,val); else inp.value=val; inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){ try{ inp.value=val; }catch(e2){} } }
+  function payModal(){ try{
+    if((window.__kmPaymentMode||'').toLowerCase().indexOf('auto')===-1) return;
+    var inputs=document.querySelectorAll('input');
+    var tx=null, txLabel=null;
+    inputs.forEach(function(inp){ var lab=inp.closest('label'); var txt=((lab?lab.textContent:'')+' '+(inp.placeholder||'')).toLowerCase(); if(txt.indexOf('transaction')!==-1 && !tx){ tx=inp; txLabel=lab||inp; } });
+    if(!tx || tx.dataset.kmV103) return;
+    tx.dataset.kmV103='1';
+    var wrap=txLabel.closest('div')||txLabel;
+    var panel=document.createElement('div'); panel.style.cssText='border:2px solid #22C55E;background:#F0FDF4;border-radius:12px;padding:12px;margin:10px 0';
+    var stt=(SNAP&&SNAP.settings)||{};
+    var hasKeys=!!(stt.mtnSubscriptionKey && stt.mtnApiKey && stt.mtnApiUser) || !!(stt.airtelClientId && stt.airtelClientSecret);
+    panel.innerHTML='<b style="color:#14532D">Pay with MTN MoMo / Airtel / Bank</b>'+
+      '<p style="font-size:13px;color:#475569;margin:6px 0">Enter your number, tap Pay, then approve the prompt on your phone. When the API confirms the money, your product goes live by itself.</p>'+
+      (hasKeys?'':'<p style="font-size:13px;font-weight:800;color:#B45309">Owner has not added API keys yet - ask the owner to add them in Owner Panel &gt; Automatic Payment API.</p>')+
+      '<label>Your MTN / Airtel number <input id="km-auto-phone" type="tel" placeholder="0771234567" style="width:100%"></label>'+
+      '<div style="display:flex;gap:8px;margin-top:8px"><button id="km-auto-mtn" type="button" class="submit" style="flex:1">Pay with MTN MoMo</button><button id="km-auto-airtel" type="button" class="submit" style="flex:1;background:#E11D48">Pay with Airtel</button><button id="km-auto-bank" type="button" class="submit" style="flex:1;background:#0F766E">Pay with Bank</button></div>'+
+      '<div id="km-auto-status" style="font-size:13px;font-weight:700;margin-top:8px;color:#14532D"></div>';
+    wrap.parentNode.insertBefore(panel, wrap);
+    if(txLabel) txLabel.style.display='none';
+    var me=sess(); var ph=document.getElementById('km-auto-phone'); if(ph) ph.value=(me&&(me.phone||''))||'';
+    function go(net){ var st2=document.getElementById('km-auto-status'); var phone=(document.getElementById('km-auto-phone').value||'').trim();
+      if(phone.replace(/\D/g,'').length<9){ st2.textContent='Enter your MTN / Airtel number first.'; return; }
+      try{ localStorage.setItem('km_auto_pay', JSON.stringify({phone:phone, network:net, ts:Date.now()})); }catch(e){}
+      setNative(tx, 'AUTO-'+Date.now());
+      st2.textContent='Creating your product, then sending the prompt to '+phone+'...';
+      var form=tx.closest('form'); var btn=form?form.querySelector('button[type="submit"]'):null;
+      if(btn) btn.click(); else if(form){ try{ form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); }catch(e){} }
+    }
+    document.getElementById('km-auto-mtn').onclick=function(){ go('MTN'); };
+    document.getElementById('km-auto-airtel').onclick=function(){ go('AIRTEL'); };
+    document.getElementById('km-auto-bank').onclick=function(){ var st2=document.getElementById('km-auto-status'); var stt2=(SNAP&&SNAP.settings)||{};
+      if(stt2.bankApiUrl){ go('BANK'); return; }
+      // No Bank API yet: keep Bank exactly as before - show the Bank steps + Transaction ID box in this same modal
+      try{ var btns=document.querySelectorAll('button'); for(var i=0;i<btns.length;i++){ var t=(btns[i].textContent||'').trim(); if(t==='Bank' && btns[i].id!=='km-auto-bank'){ btns[i].click(); break; } } }catch(e){}
+      if(txLabel) txLabel.style.display='';
+      if(st2) st2.textContent='Bank payment: follow the Bank steps below, then enter your Transaction ID.'; };
+  }catch(e){} }
+  setInterval(payModal, 1200);
+  // --- Watcher: after product is created, send the prompt + poll status ---
+  function banner(txt,color){ var b=document.getElementById('km-auto-banner');
+    if(!b){ b=document.createElement('div'); b.id='km-auto-banner'; b.style.cssText='position:fixed;left:12px;right:12px;top:12px;z-index:99999;border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);text-align:center'; document.body.appendChild(b); }
+    if(!txt){ b.style.display='none'; return; } b.style.display='block'; b.style.background=color||'#DCFCE7'; b.style.color='#14532D'; b.textContent=txt; }
+  function feeFromModal(){ try{ var txt=document.body.innerText||''; var m=txt.match(/Fee[^0-9]{0,20}UGX\s*([\d,]+)/i); if(m) return parseInt(m[1].replace(/,/g,''),10); }catch(e){} return null; }
+  setInterval(function(){ try{
+    var ap=null; try{ ap=JSON.parse(localStorage.getItem('km_auto_pay')||'null'); }catch(e){}
+    if(!ap || !SNAP || !Array.isArray(SNAP.products)) return;
+    var me=sess(); if(!me) return;
+    var prod=null;
+    SNAP.products.forEach(function(p){ if(p && String(p.paymentReference||'').indexOf('AUTO-')===0 && (p.sellerId===me.id || p.sellerPhone===me.phone || p.sellerName===me.name) && p.status==='pending_verification') prod=p; });
+    if(!prod) return;
+    var done={}; try{ done=JSON.parse(localStorage.getItem('km_auto_done')||'{}'); }catch(e){}
+    if(done[prod.id]) return;
+    done[prod.id]=1; try{ localStorage.setItem('km_auto_done', JSON.stringify(done)); }catch(e){}
+    var amt=feeFromModal() || prod.feeAmount || prod.listingFee || prod.fee || prod.feePaid || null;
+    banner('Check your phone ('+ap.phone+') - approve the payment prompt with your PIN. Waiting for the API to confirm...', '#FEF9C3');
+    fetch('/api/pay/initiate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:prod.id, phone:ap.phone, network:ap.network, amount:amt, sellerId:me.id})})
+    .then(function(r){ return r.json(); }).then(function(js){
+      if(!js.ok){ if(js.error==='BANK_MANUAL'){ banner('Bank API not added yet - use the Bank payment steps below.', '#FEE2E2'); } else { banner('Automatic payment could not start: '+(js.error||'unknown error')+' - ask the owner to check the API keys.', '#FEE2E2'); } return; }
+      var ref=js.referenceId;
+      var iv=setInterval(function(){ fetch('/api/pay/status?reference='+encodeURIComponent(ref)).then(function(r){ return r.json(); }).then(function(s){
+        if(s.status==='successful'){ clearInterval(iv); banner('Payment verified by the API - your product is now LIVE!', '#DCFCE7'); try{ localStorage.removeItem('km_auto_pay'); }catch(e){} setTimeout(function(){ banner(''); }, 6000); }
+        else if(s.status==='failed'){ clearInterval(iv); banner('Payment failed or was cancelled on your phone. Please try paying again.', '#FEE2E2'); }
+      }).catch(function(){}); }, 5000);
+    }).catch(function(){ banner('Could not reach the payment server. Check connection and try again.', '#FEE2E2'); });
+  }catch(e){} }, 3000);
+  // --- Unread counts: notifications bell + messages button ---
+  function msgKey(m){ return (m.fromName||'')+'|'+(m.text||'')+'|'+(m.time||''); }
+  function seenSet(){ try{ return new Set(JSON.parse(localStorage.getItem('km_seen_msgs')||'[]')); }catch(e){ return new Set(); } }
+  document.addEventListener('click', function(){ try{
+    var nodes=document.querySelectorAll('.chat-msg'); if(!nodes.length) return;
+    var seen=seenSet(); var ch=false;
+    nodes.forEach(function(el){ var t=(el.textContent||'').trim(); if(t){ if(!seen.has(t)){ seen.add(t); ch=true; } } });
+    if(ch) try{ localStorage.setItem('km_seen_msgs', JSON.stringify(Array.from(seen).slice(-500))); }catch(e){}
+  }catch(e){} }, true);
+  setInterval(function(){ try{
+    if(!SNAP) return; var me=sess(); if(!me) return;
+    var myNotifs=(SNAP.notifications||[]).filter(function(n){ return !n.userId || n.userId===me.id || (isOwner() && (n.forOwner || n.userId==='owner')); });
+    var unreadN=myNotifs.filter(function(n){ return !n.read; }).length;
+    var bell=document.querySelector('.bell-count'); if(bell) bell.textContent=String(unreadN);
+    var seen=seenSet(); var unreadM=0;
+    (SNAP.chats||[]).forEach(function(c){ var msgs=c.messages||[]; if(!msgs.length) return;
+      var last=msgs[msgs.length-1]; var mine=(c.buyerId===me.id && last.fromId===me.id) || (c.sellerId===me.id && last.fromId===me.id);
+      var inChat=(c.buyerId===me.id || c.sellerId===me.id || isOwner());
+      if(inChat && !mine && !seen.has((last.text||'').trim() || msgKey(last))) unreadM++; });
+    var msgBtn=document.querySelector('[aria-label="Messages"], [title="Messages"]');
+    if(msgBtn){ var b=msgBtn.querySelector('[data-km-msg-badge]'); if(unreadM>0){ if(!b){ b=document.createElement('span'); b.setAttribute('data-km-msg-badge','1'); b.style.cssText='position:absolute;top:-4px;right:-4px;background:#EF4444;color:#fff;border-radius:999px;min-width:18px;height:18px;display:grid;place-items:center;font-size:11px;font-weight:900;padding:0 4px'; msgBtn.style.position='relative'; msgBtn.appendChild(b); } b.textContent=String(unreadM); b.style.display='grid'; } else if(b){ b.style.display='none'; } }
+  }catch(e){} }, 2000);
+})();
+</script>
+
 </body>
 
 
