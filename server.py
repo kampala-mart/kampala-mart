@@ -57,6 +57,11 @@ def _merge_list(stored, incoming, deleted):
             out[k] = it; order.append(k)
     return [out[k] for k in order]
 def _merge_shop(cur, data, deleted):
+    # Deletes are PERMANENT: tombstones live on the server, not in one browser
+    try:
+        deleted = set(deleted or []) | set(cur.get("_deletedIds") or [])
+    except Exception:
+        deleted = set(deleted or [])
     merged = dict(cur)
     list_fields = ["products", "chats", "notifications", "submissions", "payments", "users", "broadcasts", "reviews", "banners", "categories", "locations", "pendingPayments"]
     for f in list_fields:
@@ -65,10 +70,20 @@ def _merge_shop(cur, data, deleted):
     for f in ["settings", "ads", "saved"]:
         if isinstance(data.get(f), dict):
             base = dict(cur.get(f) or {}); base.update(data[f]); merged[f] = base
+    # Keep the stored OneSignal REST key: clients never send it back (it is stripped from GET)
+    try:
+        _rk = (cur.get("settings") or {}).get("onesignalRestKey")
+        if _rk and not (merged.get("settings") or {}).get("onesignalRestKey"):
+            merged["settings"] = dict(merged.get("settings") or {}); merged["settings"]["onesignalRestKey"] = _rk
+    except Exception: pass
     for k, v in data.items():
         if k in list_fields or k in ("settings", "ads", "saved", "deletedIds", "allowEmpty"):
             continue
         merged[k] = v
+    try:
+        merged["_deletedIds"] = sorted(deleted)[-1000:]
+    except Exception:
+        pass
     return merged
 def _enrich(d):
     # Returns True if d changed. 1) Automatic mode: verified payment -> live, no owner approval.
@@ -246,6 +261,17 @@ def _get_shop():
         if _enrich(d):
             try: save(d)
             except Exception: pass
+        # OneSignal REST key NEVER leaves the server - strip it from every response
+        try:
+            st = d.get("settings") or {}
+            if "onesignalRestKey" in st:
+                d = dict(d); st = dict(st); del st["onesignalRestKey"]; d["settings"] = st
+        except Exception: pass
+        # Delete tombstones are internal only
+        try:
+            if "_deletedIds" in d:
+                d = dict(d); del d["_deletedIds"]
+        except Exception: pass
         return d
 
 def load():
@@ -326,6 +352,11 @@ class H(SimpleHTTPRequestHandler):
                 return self._send(200, {"ok": ok, "providers": res, "apiVerified": bool(ok)})
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
 
+        if u == "/api/onesignal/status":
+            try:
+                with LOCK: _d = load(); _st = _d.get("settings") or {}
+                return self._send(200, {"ok": True, "hasRestKey": bool(_st.get("onesignalRestKey")), "appId": _st.get("onesignalAppId") or _st.get("oneSignalAppId") or ""})
+            except Exception as e: return self._send(500, {"error": str(e)[:200]})
         if u in ("/api/shop","/api/shop/"):
             try: return self._send(200, _get_shop())
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
@@ -435,6 +466,51 @@ class H(SimpleHTTPRequestHandler):
                 rec = {"id": ref, "referenceId": ref, "productId": data.get("productId"), "sellerId": (prod or {}).get("sellerId") or data.get("sellerId") or "", "phone": phone, "network": net, "amount": amount, "status": "pending", "createdAt": _now_iso()}
                 d.setdefault("pendingPayments", []).append(rec); save(d)
                 return self._send(200, {"ok": True, "referenceId": ref, "message": "Check your phone - approve the payment prompt with your PIN."})
+        if u == "/api/onesignal/key":
+            try:
+                n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
+                body=json.loads(raw or b"{}")
+            except Exception: return self._send(400, {"error": "invalid json"})
+            _rk = str(body.get("restKey") or body.get("key") or "").strip()
+            if not _rk: return self._send(400, {"ok": False, "error": "Paste the REST API Key first."})
+            with LOCK:
+                _d = load(); _d.setdefault("settings", {})["onesignalRestKey"] = _rk; save(_d)
+            return self._send(200, {"ok": True, "saved": True})
+        if u == "/api/onesignal/send":
+            try:
+                n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
+                body=json.loads(raw or b"{}")
+            except Exception: return self._send(400, {"error": "invalid json"})
+            _title = str(body.get("title") or "Kampala Mart")
+            _msg = str(body.get("message") or "")
+            _ch = str(body.get("channel") or "push").lower()
+            if not _msg: return self._send(400, {"ok": False, "error": "Type a message first."})
+            with LOCK:
+                _d = load(); _st = _d.get("settings") or {}
+                _app = _st.get("onesignalAppId") or _st.get("oneSignalAppId") or ""
+                _rest = _st.get("onesignalRestKey") or ""
+            if not _app: return self._send(400, {"ok": False, "error": "Save your OneSignal App ID first (Owner Panel > Push & Broadcast)."})
+            if not _rest: return self._send(400, {"ok": False, "error": "Save your OneSignal REST API Key first (Owner Panel > Push & Broadcast > Save REST Key)."})
+            def _os_post(payload):
+                req = urllib.request.Request("https://api.onesignal.com/notifications", data=json.dumps(payload).encode(), headers={"Content-Type": "application/json", "Authorization": "Basic " + _rest}, method="POST")
+                try:
+                    with urllib.request.urlopen(req, timeout=25) as resp: return resp.status, json.loads(resp.read() or b"{}")
+                except urllib.error.HTTPError as e:
+                    try: return e.code, json.loads(e.read() or b"{}")
+                    except Exception: return e.code, {"errors": [str(e)]}
+                except Exception as e: return 0, {"errors": [str(e)[:200]]}
+            _recipients = 0; _errors = []
+            _icon = "https://kampala-mart-g8t8.onrender.com/icon-192.png"
+            if _ch in ("push", "both"):
+                _code, _jt = _os_post({"app_id": _app, "included_segments": ["Subscribed Users"], "headings": {"en": "Kampala Mart"}, "contents": {"en": (_title + " - " + _msg) if _title else _msg}, "chrome_web_icon": _icon, "firefox_icon": _icon, "large_icon": _icon, "url": "https://kampala-mart-g8t8.onrender.com"})
+                if _code < 300: _recipients += int(_jt.get("recipients") or 0)
+                else: _errors += list(_jt.get("errors") or [str(_code)])
+            if _ch in ("email", "both"):
+                _code, _jt = _os_post({"app_id": _app, "included_segments": ["Subscribed Users"], "email_subject": _title, "email_body": "<div><b>Kampala Mart</b></div><h2>" + _title + "</h2><p>" + _msg.replace(chr(10), "<br>") + "</p>"})
+                if _code < 300: _recipients += int(_jt.get("recipients") or 0)
+                else: _errors += list(_jt.get("errors") or [str(_code)])
+            if _errors: return self._send(400, {"ok": False, "errors": _errors, "recipients": _recipients})
+            return self._send(200, {"ok": True, "recipients": _recipients})
         if u not in ("/api/shop","/api/shop/"): return self._send(404,{"error":"not found"})
         n=int(self.headers.get("Content-Length") or 0); raw=self.rfile.read(n) if n else b"{}"
         try: data=json.loads(raw or b"{}")
