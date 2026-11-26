@@ -396,6 +396,16 @@ class H(SimpleHTTPRequestHandler):
                 with LOCK: _d = load(); _st = _d.get("settings") or {}
                 return self._send(200, {"ok": True, "hasRestKey": bool(_st.get("onesignalRestKey")), "appId": _st.get("onesignalAppId") or _st.get("oneSignalAppId") or ""})
             except Exception as e: return self._send(500, {"error": str(e)[:200]})
+        if u=="/api/audit":
+            try:
+                with LOCK: d=load(); st=d.get("settings") or {}
+                fee=str(st.get("feeMode") or st.get("listingFee") or st.get("fee") or "").lower()
+                paymode=str(st.get("paymentMode") or st.get("mode") or st.get("payMode") or st.get("listingMode") or "").lower()
+                ads=d.get("ads") or st.get("ads") or {}
+                if isinstance(ads,str): ads={}
+                checks={"free_theory":{"feeMode":fee or "not-set (defaults FREE)","paymentMode":paymode or "not-set","note":"FREE = upload goes live / to approval without fee. PAID = seller must pay listing fee first."},"api_payments":{"apiVerified":bool(st.get("apiVerified")),"hasMtnKeys":bool(st.get("mtnSubscriptionKey") and st.get("mtnApiUser") and st.get("mtnApiKey")),"hasAirtelKeys":bool(st.get("airtelClientId") and st.get("airtelClientSecret")),"hasBank":bool(st.get("bankApiUrl")),"note":"If apiVerified false, Automatic mode blocks payments - owner must Test API Connection."},"onesignal":{"appIdSet":bool(st.get("onesignalAppId") or st.get("oneSignalAppId")),"restKeySet":bool(st.get("onesignalRestKey")),"note":"App ID on device + REST key on SERVER ONLY (never sent to browser)."},"google_ads":{"adsEnabled":bool(ads.get("adsEnabled")),"adsenseId":bool(ads.get("adsenseId")),"note":"Ads are server settings. If disabled or no AdSense ID, no ads show - correct, not an error."},"server_sync":{"version":VERSION[0],"products":len(d.get("products") or []),"chats":len(d.get("chats") or []),"notifications":len(d.get("notifications") or [])}}
+                return self._send(200, {"ok":True,"checks":checks})
+            except Exception as e: return self._send(500, {"error":str(e)[:200]})
         if u=="/api/version":
             try: return self._send(200, {"ok":True,"version":VERSION[0]})
             except Exception as e: return self._send(500, {"error":str(e)[:200]})
@@ -488,28 +498,6 @@ class H(SimpleHTTPRequestHandler):
             with LOCK:
                 d=load()
                 try:
-                    # Bulk atomic patches: {patches:[{kind,item},...]} - all under ONE lock, one version bump
-                    if isinstance(body.get("patches"), list):
-                        for _p in body["patches"]:
-                            _k=_p.get("kind"); _it=_p.get("item") or {}
-                            if _k=="settings" and isinstance(_it, dict):
-                                _b=dict(d.get("settings") or {}); _b.update(_it); d["settings"]=_b
-                            elif isinstance(_it, dict):
-                                _lst=list(d.get(_k) or []); _kk=_it.get("id") or _it.get("name") or _it.get("title"); _f=False
-                                for _i,_ex in enumerate(_lst):
-                                    if isinstance(_ex,dict) and (_ex.get("id")==_kk or _ex.get("name")==_kk): _lst[_i]=_it; _f=True; break
-                                if not _f: _lst.insert(0,_it)
-                                d[_k]=_lst
-                        save(d); _bump(); return self._send(200, {"ok":True,"version":VERSION[0],"atomic":True})
-                    if isinstance(body.get("deletedIds"), list) and body.get("deletedIds"):
-                        _del=set(str(x) for x in body["deletedIds"]); d["_deletedIds"]=sorted(set(d.get("_deletedIds") or [])|_del)[-1000:]
-                        for _lf in ("products","chats","notifications","boosts"):
-                            d[_lf]=[x for x in (d.get(_lf) or []) if str((x or {}).get("id")) not in _del]
-                        save(d); _bump(); return self._send(200, {"ok":True,"version":VERSION[0],"deleted":len(_del)})
-                    if isinstance(body.get("categories"), list): d["categories"]=body["categories"]
-                    if isinstance(body.get("locations"), list): d["locations"]=body["locations"]
-                    if body.get("categories") is not None or body.get("locations") is not None:
-                        save(d); _bump(); return self._send(200, {"ok":True,"version":VERSION[0]})
                     kind=body.get("kind"); item=body.get("item") or {}
                     if kind=="settings" and isinstance(item, dict):
                         base=dict(d.get("settings") or {}); base.update(item); d["settings"]=base
